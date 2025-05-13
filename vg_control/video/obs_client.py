@@ -34,7 +34,7 @@ def try_launch_obs_if_not_open():
             # Launch OBS from its directory
             subprocess.Popen([path], cwd=obs_dir)
             # Give OBS a moment to start up
-            time.sleep(10)
+            time.sleep(60)
             return
             
     raise FileNotFoundError("Could not find OBS installation")

@@ -1,2 +1,3 @@
 halo infinite.exe
 haloinfinite.exe
+MCC-Win64-Shipping.exe
