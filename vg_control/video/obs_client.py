@@ -150,8 +150,6 @@ class OBSClient:
         #self.req_client.set_current_profile(self.default_profile)
 
 
-
-
     def init_configuration(self):
         self.req_client.set_current_profile('owl_data_recorder')
 
