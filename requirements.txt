@@ -8,3 +8,4 @@ obsws-python
 opencv-python
 decord
 pandas
+toolz
