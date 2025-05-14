@@ -131,3 +131,36 @@ class RawInputReader:
             )
         else:
             return False, ()
+
+from ..constants import POLLS_PER_FRAME, FPS
+
+def wait_until_input(self):
+    """
+    Blocks until any input is detected then 
+    """
+    delay = 1. / FPS / POLLS_PER_FRAME
+    reader = RawInputReader()
+    if not reader.open():
+        raise RuntimeError("Failed to initialize raw input")
+
+    try:
+        while True:
+            mouse_move_success, _ = reader.get_mouse_move_input()
+            if mouse_move_success:
+                return
+
+            mouse_button_success, _ = reader.get_mouse_button_input() 
+            if mouse_button_success:
+                return
+
+            mouse_scroll_success, _ = reader.get_mouse_scroll_input()
+            if mouse_scroll_success:
+                return
+
+            keyboard_success, _ = reader.get_keyboard_input()
+            if keyboard_success:
+                return
+
+            time.sleep(delay)
+    finally:
+        reader.close()

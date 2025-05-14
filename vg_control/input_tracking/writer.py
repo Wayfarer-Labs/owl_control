@@ -32,6 +32,9 @@ class DataWriter:
         self.tracker = InputTracker()
         self.current_data = []
 
+    def get_time_since_last_event(self):
+        return self.tracker.get_time_since_last_event()
+
     async def start(self):
         """
         Starts recording user inputs. Starts a loop that adds events onto self.current_data
