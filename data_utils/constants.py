@@ -6,3 +6,5 @@ ROOT_DIR = "/mnt/c/Users/samib/OneDrive/Desktop/OWL/vg_control/data_dump/games/"
 
 # Keys to extract from the data
 KEYBINDS = ["W","A","S","D","LMB","RMB"]
+
+ACTION_DIM = len(KEYBINDS) + 2 # +2 for mouse movement

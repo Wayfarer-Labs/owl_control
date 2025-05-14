@@ -1,7 +1,14 @@
 import torch
+import os, pathlib
 import pandas as pd
 from toolz import curry
 from data_utils.keybinds import CODE_TO_KEY, KEY_TO_CODE
+
+
+def seek_video_dirs(root: str | os.PathLike[str]) -> list[pathlib.Path]:
+    root = pathlib.Path(root)
+    return [p for p in root.rglob("*") if p.is_dir() and (p / "inputs.csv").exists()]
+
 
 def ascii_from_code(code: int) -> str:
     return CODE_TO_KEY.get(code, f"Unknown<{code}>")
@@ -39,7 +46,6 @@ def _mouse_to_tensor(df: pd.DataFrame) -> torch.Tensor:
 
 
 # -------- keyboard
-
 
 # -- transformations
 def _normalize_timestamps(df: pd.DataFrame) -> pd.DataFrame:

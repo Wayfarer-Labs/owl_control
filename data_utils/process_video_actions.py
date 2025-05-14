@@ -10,12 +10,8 @@ from tqdm import tqdm
 from toolz import pipe
 
 from data_utils import utils
-from data_utils.utils import code_from_ascii
+from data_utils.utils import code_from_ascii, seek_video_dirs
 from data_utils.constants import FPS, ROOT_DIR, KEYBINDS
-
-def seek_video_dirs(root: str | os.PathLike[str]) -> list[Path]:
-    root = Path(root)
-    return [p for p in root.rglob("*") if p.is_dir() and (p / "inputs.csv").exists()]
 
 
 def to_button_data_tensor(
@@ -46,12 +42,12 @@ def to_button_data_tensor(
     )
 
 def mouse_data_to_tensor(
-    mouse_data: pd.DataFrame,
+    action_data: pd.DataFrame,
     *,
     fps: int = FPS,
 ) -> torch.Tensor:
     return pipe(
-        mouse_data,
+        action_data,
         utils._normalize_timestamps,
         utils._filter_mouse_moves,
         utils._add_frame_column(fps),
