@@ -106,49 +106,81 @@ export function ConsentPage({ apiKey, onConsent, onCancel }: ConsentPageProps) {
             className="h-80 overflow-y-auto border p-4 rounded mb-6"
             onScroll={checkScrollPosition}
           >
-            <h2 className="text-lg font-bold mb-4">Research Participant Information and Consent Form</h2>
+            <h2 className="text-lg font-bold mb-4">Informed Consent</h2>
+            <h3 className="text-md font-bold">Research Study: OpenWorld Labs Interactive Game Data Pilot</h3>
+            <p className="mb-3">
+              Principal Investigators: Louis Castricato, Shahbuland Matiana<br />
+              Contact: louis@openworldlabs.ai, shab@openworldlabs.ai<br />
+              Affiliated Institution: Brown University
+            </p>
             
             <h3 className="text-md font-bold mt-4">Purpose of Study</h3>
             <p className="mb-3">
-              This research aims to understand and improve human-computer interaction in gaming environments. 
-              The data collected will help us develop better systems for game control and accessibility.
+              You are invited to participate in a research study aiming to collect combined game and
+              control data for the purposes of training world models and subsequently AI agents. The
+              curated dataset will be open sourced and made publicly available for research purposes. This
+              software will record your game and inputs to potentially contribute to this dataset. There is no
+              minimum required
             </p>
             
             <h3 className="text-md font-bold mt-4">Procedures</h3>
             <p className="mb-3">
-              VG Control will collect your input data (keyboard, mouse, controller inputs) while you play games.
-              This data will be securely uploaded to our research database. The software also captures video of your 
-              gameplay for research purposes only.
+              If you agree to participate our software will:<br />
+              - Record your screen during gameplay sessions<br />
+              - Log keyboard and mouse inputs<br />
+              - Store this data for research purposes
             </p>
             
-            <h3 className="text-md font-bold mt-4">Risks and Benefits</h3>
+            <h3 className="text-md font-bold mt-4">Data Collection and Privacy</h3>
             <p className="mb-3">
-              There are minimal risks associated with this study. Your personal information will be kept confidential.
-              The benefits include contributing to research that will improve gaming experiences for all players.
+              - In order to prevent any identifying information such as gamertags or text chat from leaking
+              into the dataset, we are limiting data collection to a fixed set (whitelist) of single player
+              games.<br />
+              - The recording software is limited to only capturing full screen applications.<br />
+              - The recording software will stop recording if no activity is detected for a sufficient period of
+              time.<br />
+              - Further processing and cleaning will be done before any open source release. During this
+              process, the data will be stored securely and anonymized.<br />
+              - Upon full open source release, there will be no identifying information in the dataset.<br />
+              - The software cannot record microphone audio<br />
+              - The software records all desktop audio<br />
+              - When idle, this software will update stored data and (optionally) delete any local videos to
+              preserve storage space on your device.<br />
+              - The software avoids recording overlays.
             </p>
             
-            <h3 className="text-md font-bold mt-4">Confidentiality</h3>
+            <h3 className="text-md font-bold mt-4">Potential Risks</h3>
             <p className="mb-3">
-              All data collected will be stored securely. Your identity will not be linked to the data in any 
-              published materials. We follow strict data protection protocols.
+              - The software records all desktop audio while you are playing a game. This will also record
+              any background audio sources that are active while you are playing.
             </p>
             
-            <h3 className="text-md font-bold mt-4">Participation</h3>
+            <h3 className="text-md font-bold mt-4">Voluntary Participation</h3>
             <p className="mb-3">
-              Your participation is voluntary. You can withdraw at any time by uninstalling the software.
-              If you choose to withdraw, you can request that your data be deleted by contacting us.
+              Your participation is entirely voluntary. You may:<br />
+              - Choose not to participate<br />
+              - Stop recording at any time<br />
+              - Request deletion of your recorded data<br />
+              - Withdraw from the study without penalty
             </p>
             
-            <h3 className="text-md font-bold mt-4">Contact Information</h3>
+            <h3 className="text-md font-bold mt-4">Compensation</h3>
             <p className="mb-3">
-              If you have questions or concerns about this research, please contact:
-              research@openworldlabs.com
+              - There is no compensation for this study
+            </p>
+            
+            <h3 className="text-md font-bold mt-4">Questions or Concerns</h3>
+            <p className="mb-3">
+              For questions about this research, contact shab@openworldlabs.ai
             </p>
             
             <h3 className="text-md font-bold mt-4">Consent</h3>
             <p className="mb-3">
-              By agreeing below, you confirm that you have read and understood this information, 
-              and that you consent to participate in this research study.
+              By clicking "Accept" below you confirm that:<br />
+              - You have read and understood the above information<br />
+              - You are 18 years or older<br />
+              - You voluntarily agree to participate<br />
+              - You understand you can withdraw at any time
             </p>
             
             <div className="h-40 mb-3">
