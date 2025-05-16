@@ -47,6 +47,7 @@
     "electron-builder": "^24.6.4",
     "html-webpack-plugin": "^5.5.3",
     "postcss": "^8.4.31",
+    "postcss-loader": "^8.1.1",
     "style-loader": "^3.3.3",
     "tailwindcss": "^3.3.3",
     "ts-loader": "^9.5.0",
@@ -59,20 +60,31 @@
     "productName": "VG Control",
     "mac": {
       "category": "public.app-category.utilities",
-      "target": ["dmg", "zip"]
+      "target": [
+        "dmg",
+        "zip"
+      ]
     },
     "win": {
-      "target": ["nsis", "portable"]
+      "target": [
+        "nsis",
+        "portable"
+      ]
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "category": "Utility"
     },
     "extraResources": [
       {
         "from": "vg_control",
         "to": "vg_control",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "rawinputlib.dll",

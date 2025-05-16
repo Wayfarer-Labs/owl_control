@@ -61,11 +61,6 @@ const rendererConfig = {
     new HtmlWebpackPlugin({
       template: './src/index.html',
       filename: 'index.html'
-    }),
-    new HtmlWebpackPlugin({
-      template: './src/widget.html',
-      filename: 'widget.html',
-      chunks: ['widget']
     })
   ]
 };

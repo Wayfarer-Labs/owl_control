@@ -84,7 +84,7 @@ export function ConsentPage({ apiKey, onConsent, onCancel }: ConsentPageProps) {
   };
   
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4">
+    <div className="fixed inset-0 bg-[#0c0c0f] flex flex-col items-center justify-center p-4">
       {/* Theme toggle removed */}
       
       <div className="flex items-center justify-center mb-8">
@@ -92,7 +92,7 @@ export function ConsentPage({ apiKey, onConsent, onCancel }: ConsentPageProps) {
         <h1 className="text-3xl font-bold">VG Control</h1>
       </div>
       
-      <Card className="w-full max-w-3xl">
+      <Card className="w-full max-w-3xl bg-[#13151a] border-[#2a2d35]">
         <CardHeader>
           <CardTitle className="text-xl font-bold">Informed Consent</CardTitle>
           <CardDescription>
@@ -103,7 +103,7 @@ export function ConsentPage({ apiKey, onConsent, onCancel }: ConsentPageProps) {
         <CardContent>
           <div 
             ref={consentRef} 
-            className="h-80 overflow-y-auto border p-4 rounded mb-6"
+            className="h-80 overflow-y-auto border border-[#2a2d35] bg-[#0c0c0f] p-4 rounded mb-6"
             onScroll={checkScrollPosition}
           >
             <h2 className="text-lg font-bold mb-4">Informed Consent</h2>
@@ -195,6 +195,7 @@ export function ConsentPage({ apiKey, onConsent, onCancel }: ConsentPageProps) {
             <Button 
               variant="outline"
               onClick={handleCancel}
+              className="bg-transparent text-white border-[#2a2d35] hover:bg-[#2a2d35]/20"
             >
               I Do Not Consent
             </Button>
@@ -202,6 +203,7 @@ export function ConsentPage({ apiKey, onConsent, onCancel }: ConsentPageProps) {
             <Button 
               disabled={!hasReadConsent}
               onClick={handleConsent}
+              className="bg-[#42e2f5] text-black hover:bg-[#42e2f5]/90"
             >
               I Agree to the Informed Consent
             </Button>

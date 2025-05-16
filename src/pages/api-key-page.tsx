@@ -41,7 +41,7 @@ export function ApiKeyPage({ onApiKeySuccess, onShowConsent }: ApiKeyPageProps) 
   };
   
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4">
+    <div className="fixed inset-0 bg-[#0c0c0f] flex flex-col items-center justify-center p-4">
       {/* Theme toggle removed */}
       
       <div className="flex items-center justify-center mb-8">
@@ -49,7 +49,7 @@ export function ApiKeyPage({ onApiKeySuccess, onShowConsent }: ApiKeyPageProps) 
         <h1 className="ml-3 text-3xl font-bold">VG Control</h1>
       </div>
       
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md bg-[#13151a] border-[#2a2d35]">
         <CardHeader>
           <CardTitle className="text-xl font-bold">Welcome</CardTitle>
           <CardDescription>
@@ -68,6 +68,7 @@ export function ApiKeyPage({ onApiKeySuccess, onShowConsent }: ApiKeyPageProps) 
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   required
+                  className="bg-[#0c0c0f] border-[#2a2d35] text-white"
                 />
               </div>
               
@@ -78,7 +79,7 @@ export function ApiKeyPage({ onApiKeySuccess, onShowConsent }: ApiKeyPageProps) 
               )}
               
               <Button 
-                className="w-full" 
+                className="w-full bg-[#42e2f5] text-black hover:bg-[#42e2f5]/90" 
                 type="submit"
                 disabled={isLoading}
               >
@@ -88,7 +89,7 @@ export function ApiKeyPage({ onApiKeySuccess, onShowConsent }: ApiKeyPageProps) 
           </form>
         </CardContent>
         
-        <CardFooter className="flex justify-center border-t pt-6">
+        <CardFooter className="flex justify-center border-t border-[#2a2d35] pt-6">
           <p className="text-sm text-muted-foreground">
             Open World Labs &copy; {new Date().getFullYear()}
           </p>

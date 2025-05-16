@@ -559,11 +559,7 @@ app.on('before-quit', () => {
 
 // Set up IPC handlers
 function setupIpcHandlers() {
-  // Widget mode switch handler
-  ipcMain.handle('switch-to-widget', () => {
-    console.log('Switch to widget mode requested');
-    return { success: true };
-  });
+  // Widget mode has been removed
 
   // Open directory dialog
   ipcMain.handle('open-directory-dialog', async () => {

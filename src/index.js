@@ -3,7 +3,6 @@ import { createRoot } from 'react-dom/client';
 import { ThemeProvider } from './components/theme-provider';
 import { ApiKeyPage } from './pages/api-key-page';
 import { ConsentPage } from './pages/consent-page';
-import { WidgetUI } from './pages/widget-ui';
 import { SettingsPage } from './pages/settings-page';
 import { AuthService } from './services/auth-service';
 
@@ -47,14 +46,6 @@ const App = () => {
     if (page === 'settings' && isAuth) {
       // If this is a settings page request and user is authenticated, show settings
       setShowSettings(true);
-    } else if (isAuth) {
-      // If authenticated, switch to widget mode
-      try {
-        const { ipcRenderer } = window.require('electron');
-        ipcRenderer.invoke('switch-to-widget');
-      } catch (error) {
-        console.error('Error switching to widget mode:', error);
-      }
     }
   }, []);
 
@@ -75,10 +66,6 @@ const App = () => {
   const handleCancelConsent = () => {
     setPendingApiKey('');
     setShowConsent(false);
-  };
-
-  const handleOpenSettings = () => {
-    setShowSettings(true);
   };
 
   const handleCloseSettings = () => {
@@ -273,10 +260,7 @@ const App = () => {
               onShowConsent: handleShowConsent
             })
         )
-      : React.createElement(React.Fragment, null,
-          React.createElement(WidgetUI, { onOpenSettings: handleOpenSettings }),
-          showSettings && React.createElement(SettingsPage, { onClose: handleCloseSettings })
-        )
+      : React.createElement(SettingsPage, { onClose: handleCloseSettings })
   );
 };
 
