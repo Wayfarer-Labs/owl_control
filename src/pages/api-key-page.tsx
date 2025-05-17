@@ -1,10 +1,6 @@
 import React, { useState } from 'react';
-// import { Logo } from '@/components/logo';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-// Theme toggle removed - always dark theme
 import { AuthService } from '@/services/auth-service';
 
 interface ApiKeyPageProps {
@@ -28,73 +24,58 @@ export function ApiKeyPage({ onApiKeySuccess, onShowConsent }: ApiKeyPageProps) 
       const result = await authService.validateApiKey(apiKey);
       
       if (result.success) {
-        // Show consent instead of directly proceeding
         onShowConsent(apiKey);
       } else {
-        setError(result.message || 'API key validation failed');
+        setError(result.message || 'Invalid API key');
       }
     } catch (err) {
-      setError('API key validation failed');
+      setError('Invalid API key');
     } finally {
       setIsLoading(false);
     }
   };
   
   return (
-    <div className="fixed inset-0 bg-[#0c0c0f] flex flex-col items-center justify-center p-4">
-      {/* Theme toggle removed */}
+    <div className="h-full bg-[#0c0c0f]">
+      {/* Draggable header area */}
+      <div className="h-8" style={{ WebkitAppRegion: 'drag', '-webkit-app-region': 'drag' } as any}></div>
       
-      <div className="flex items-center justify-center mb-8">
-        {/* Logo disabled */}
-        <h1 className="ml-3 text-3xl font-bold">VG Control</h1>
+      <div className="flex items-center justify-center h-[calc(100%-2rem)]">
+        <div className="w-[380px] space-y-8">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-white mb-2">Welcome</h1>
+          <p className="text-[#828691]">Enter your API key to get started</p>
+        </div>
+        
+        <form onSubmit={handleApiKeyValidation} className="space-y-5">
+          <div>
+            <Input
+              id="apiKey"
+              placeholder="sk_..."
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              required
+              className="h-12 bg-[#1a1d23] border-[#2a2d35] text-white placeholder:text-[#4a4e58] focus:border-[#42e2f5] focus:ring-1 focus:ring-[#42e2f5]"
+            />
+            {error && (
+              <p className="text-[#ff5757] text-sm mt-2">{error}</p>
+            )}
+          </div>
+          
+          <Button 
+            className="w-full h-12 bg-[#42e2f5] text-[#0c0c0f] font-medium hover:bg-[#42e2f5]/90 transition-colors" 
+            type="submit"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Validating...' : 'Continue'}
+          </Button>
+        </form>
+        
+        <p className="text-[#4a4e58] text-sm text-center">
+          Open World Labs © 2025
+        </p>
+        </div>
       </div>
-      
-      <Card className="w-full max-w-md bg-[#13151a] border-[#2a2d35]">
-        <CardHeader>
-          <CardTitle className="text-xl font-bold">Welcome</CardTitle>
-          <CardDescription>
-            Enter your API key to get started
-          </CardDescription>
-        </CardHeader>
-        
-        <CardContent>
-          <form onSubmit={handleApiKeyValidation}>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="apiKey">API Key</Label>
-                <Input
-                  id="apiKey"
-                  placeholder="Enter your API key"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  required
-                  className="bg-[#0c0c0f] border-[#2a2d35] text-white"
-                />
-              </div>
-              
-              {error && (
-                <div className="text-red-500 text-sm">
-                  {error}
-                </div>
-              )}
-              
-              <Button 
-                className="w-full bg-[#42e2f5] text-black hover:bg-[#42e2f5]/90" 
-                type="submit"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Validating...' : 'Continue'}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-        
-        <CardFooter className="flex justify-center border-t border-[#2a2d35] pt-6">
-          <p className="text-sm text-muted-foreground">
-            Open World Labs &copy; {new Date().getFullYear()}
-          </p>
-        </CardFooter>
-      </Card>
     </div>
   );
 }

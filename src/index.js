@@ -53,9 +53,17 @@ const App = () => {
     setAuthenticated(true);
   };
 
-  const handleShowConsent = (apiKey) => {
+  const handleShowConsent = async (apiKey) => {
     setPendingApiKey(apiKey);
     setShowConsent(true);
+    
+    // Resize window for consent page
+    try {
+      const { ipcRenderer } = window.require('electron');
+      await ipcRenderer.invoke('resize-for-consent');
+    } catch (error) {
+      console.error('Error resizing window for consent:', error);
+    }
   };
 
   const handleConsent = () => {
@@ -63,9 +71,17 @@ const App = () => {
     setShowConsent(false);
   };
 
-  const handleCancelConsent = () => {
+  const handleCancelConsent = async () => {
     setPendingApiKey('');
     setShowConsent(false);
+    
+    // Resize window back to API key size
+    try {
+      const { ipcRenderer } = window.require('electron');
+      await ipcRenderer.invoke('resize-for-api-key');
+    } catch (error) {
+      console.error('Error resizing window for API key:', error);
+    }
   };
 
   const handleCloseSettings = () => {

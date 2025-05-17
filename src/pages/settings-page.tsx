@@ -175,9 +175,13 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
   };
   
   return (
-    <div className="fixed inset-0 bg-[#0c0c0f] z-50 flex flex-col p-6 select-none">
-      {/* Header */}
-      <div className="mb-6">
+    <div className="fixed inset-0 bg-[#0c0c0f] z-50 flex flex-col select-none">
+      {/* Draggable header area */}
+      <div className="h-8" style={{ WebkitAppRegion: 'drag', '-webkit-app-region': 'drag' } as any}></div>
+      
+      <div className="flex flex-col p-6">
+        {/* Header */}
+        <div className="mb-6">
         <h1 className="text-2xl font-bold text-white select-none">Settings</h1>
         <p className="text-gray-400 select-none">Configure your recording preferences</p>
       </div>
@@ -287,6 +291,7 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
         >
           Save Settings
         </button>
+      </div>
       </div>
     </div>
   );
