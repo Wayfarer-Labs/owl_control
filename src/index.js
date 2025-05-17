@@ -197,6 +197,22 @@ const App = () => {
         background-color: #0c0c0f !important;
         color: #f8f9fa !important;
       }
+
+      /* Fix black boxes around text on auth screens */
+      h1, h2, h3, h4, h5, h6, p, span, label, a,
+      div.text-sm, div.text-muted-foreground, div.flex.items-center {
+        background-color: transparent !important;
+      }
+
+      [class*="card-header"], [class*="card-title"], [class*="card-description"],
+      .text-sm, .text-muted-foreground, .col-span-2, .flex.items-center,
+      p.text-sm, div.text-sm, .space-y-2, .space-y-4 {
+        background-color: transparent !important;
+      }
+
+      .col-span-2 *, div.flex.items-center *, .rounded-lg.border.p-4 * {
+        background-color: transparent !important;
+      }
       
       /* Aurora background effect */
       body::before {

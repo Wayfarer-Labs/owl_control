@@ -6,7 +6,7 @@
 }
 
 /* Force dark mode on all elements including dynamically created ones */
-html, body, #root, div, section, article, aside, main, header, footer, nav {
+html, body, #root, section, article, aside, main, header, footer, nav {
   background-color: #0c0c0f !important;
   color: #f8f9fa !important;
 }
@@ -95,7 +95,7 @@ div.flex.min-h-screen.flex-col.items-center.justify-center {
 
 /* Prevent any white backgrounds on resize */
 @media (min-width: 640px), (min-width: 768px), (min-width: 1024px), (min-width: 1280px) {
-  html, body, #root, div, section, article, main {
+  html, body, #root, section, article, main {
     background-color: #0c0c0f !important;
   }
   div[class*="card"], div[class*="bg-card"], .card {
