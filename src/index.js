@@ -12,6 +12,7 @@ import './settings-styles.css';
 
 // Import assets to ensure they're included in the build
 import './assets/tray-icon.svg';
+import './assets/owl-emoji.svg';
 
 // Log app start for debugging
 console.log('VG Control app initializing...');
