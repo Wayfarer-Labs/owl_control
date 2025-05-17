@@ -84,7 +84,7 @@ export function ConsentPage({ apiKey, onConsent, onCancel }: ConsentPageProps) {
   };
   
   return (
-    <div className="fixed inset-0 bg-[#0c0c0f] flex flex-col items-center justify-center p-4">
+    <div className="grid place-items-center min-h-screen p-4">
       {/* Theme toggle removed */}
       
       <div className="flex items-center justify-center mb-8">
