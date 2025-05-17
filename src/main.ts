@@ -67,8 +67,8 @@ function createMainWindow() {
   }
 
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 440,
+    height: 380,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -76,8 +76,13 @@ function createMainWindow() {
     },
     frame: true,
     transparent: false,
-    resizable: true,
-    fullscreenable: false
+    resizable: false,
+    fullscreenable: false,
+    minimizable: true,
+    maximizable: false,
+    backgroundColor: '#0c0c0f',
+    center: true,
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default'
   });
 
   // Load index.html
@@ -110,16 +115,16 @@ function createSettingsWindow() {
       preload: path.join(__dirname, 'preload.js')
     },
     parent: mainWindow || undefined,
-    modal: mainWindow ? true : false,
+    modal: false,  // Allow independent movement
     show: false,  // Hide until ready to show
     backgroundColor: '#0c0c0f',  // Dark background color
     resizable: false,  // Prevent resizing
     fullscreenable: false,  // Prevent fullscreen
-    minimizable: false,  // Prevent minimize
+    minimizable: true,  // Allow minimize
     maximizable: false,  // Prevent maximize
-    frame: true,  // Keep the frame to avoid flickering
-    titleBarStyle: 'hidden',  // Hide title bar on macOS but keep frame
-    title: 'VG Control - Settings'  // Window title
+    frame: true,  // Keep the frame for window controls
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',  // macOS style
+    title: 'VG Control Settings'  // Window title
   });
   
   // Directly load settings page with query parameters - single load
@@ -674,6 +679,24 @@ function setupIpcHandlers() {
       mainWindow.close();
     }
     
+    return true;
+  });
+  
+  // Resize window for consent page
+  ipcMain.handle('resize-for-consent', async () => {
+    if (mainWindow) {
+      mainWindow.setSize(760, 700);
+      mainWindow.center();
+    }
+    return true;
+  });
+  
+  // Resize window for API key page
+  ipcMain.handle('resize-for-api-key', async () => {
+    if (mainWindow) {
+      mainWindow.setSize(440, 380);
+      mainWindow.center();
+    }
     return true;
   });
 }

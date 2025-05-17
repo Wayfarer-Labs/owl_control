@@ -6,6 +6,79 @@
 html, body {
   background-color: #0c0c0f !important;
   color: #f8f9fa !important;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Force dark background on all elements */
+* {
+  color: inherit;
+}
+
+/* Force consent page background */
+div[style*="backgroundColor: #0c0c0f"] {
+  background-color: #0c0c0f !important;
+}
+
+/* Consent page specific overrides */
+.consent-page,
+.consent-page-content {
+  background-color: #0c0c0f !important;
+}
+
+/* Override any theme or tailwind backgrounds */
+.bg-background,
+.bg-slate-900,
+.bg-gray-900,
+.bg-zinc-900,
+.bg-neutral-900,
+.bg-stone-900 {
+  background-color: #0c0c0f !important;
+}
+
+/* Remove any background gradients or patterns */
+[class*="gradient"],
+[class*="bg-gradient"] {
+  background: #0c0c0f !important;
+}
+
+/* Override dark theme backgrounds globally */
+.dark body,
+.dark #root,
+.dark .consent-page,
+.dark .consent-page-content,
+.dark [class*="bg-background"] {
+  background-color: #0c0c0f !important;
+}
+
+/* Fix any theme colors that might be showing through */
+body {
+  --background: 0 0% 4.7% !important;
+}
+
+/* Remove all background colors except our dark theme */
+div:not([style*="backgroundColor"]):not(.bg-\\[\\#1a1d23\\]) {
+  background-color: transparent !important;
+}
+
+/* Ensure buttons maintain proper styling */
+button:not([variant="outline"]) {
+  background-color: #42e2f5 !important;
+  color: #0c0c0f !important;
+}
+
+/* Outline button variant */
+button[variant="outline"] {
+  background-color: transparent !important;
+  color: white !important;
+  border-color: #2a2d35 !important;
+}
+
+#root {
+  height: 100%;
+  overflow: hidden;
 }
 
 @layer base {
@@ -68,7 +141,7 @@ html, body {
   
   /* Dark theme (same as root) */
   .dark {
-    --background: 240 12% 5%; /* #0c0c0f */
+    --background: 0 0% 4.7%; /* #0c0c0f */
     --foreground: 210 17% 98%; /* #f8f9fa */
     --card: 222 14% 9%; /* #13151a */
     --card-foreground: 210 17% 98%; /* #f8f9fa */
