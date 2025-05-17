@@ -1,147 +1,114 @@
-import argparse
 import asyncio
-import logging
+import psutil
+import GPUtil
+from datetime import datetime
 import os
-import sys
+import win32gui
+import win32process
 import time
-from pathlib import Path
 
-# Import internal modules
-from input_tracking.tracker import InputTracker
-from input_tracking.writer import InputWriter
-from video.obs_client import OBSClient
+from .input_tracking.writer import DataWriterClient
+from .video.obs_client import OBSClient
+from .constants import ROOT_DIR
 
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-logger = logging.getLogger('vg_control')
+def valid_game_names(fp = "game_list.txt"):
+    with open(fp, 'r') as file:
+        return [line.strip() for line in file if line.strip()]
 
-class VGControl:
-    def __init__(self, recording_path, output_path, api_key):
-        self.recording_path = recording_path
-        self.output_path = output_path
-        self.api_key = api_key
-        self.tracker = InputTracker()
-        self.writer = InputWriter(output_path)
+class Recorder:
+    def __init__(self):
+        self.client = DataWriterClient()
         self.obs_client = None
-        self.recording_start_time = None
-        self.recording_end_time = None
-        self.running = False
-        self.task = None
+    
+        self.gpu_threshold = 50  # GPU usage threshold to detect game
+        self.game_pid = None
+        self.game_name = None
 
-    def start_recording_callback(self, timestamp):
-        """Called when OBS starts recording"""
-        self.recording_start_time = timestamp
-        logger.info(f"Recording started at {self.recording_start_time}")
-        # Update the writer with the recording start time
-        self.writer.set_recording_start_time(self.recording_start_time)
+    async def main(self):
 
-    def end_recording_callback(self, timestamp):
-        """Called when OBS stops recording"""
-        self.recording_end_time = timestamp
-        logger.info(f"Recording ended at {self.recording_end_time}")
-        # Finalize the output file
-        self.writer.finalize(self.recording_end_time)
-        
-        # Stop the tracker if we're still running
-        if self.running:
-            self.stop()
+        while True:
+            # Check for valid games in the process list
+            valid_games = valid_game_names()
+            processes = []
+            for proc in psutil.process_iter(['pid', 'name']):
+                try:
+                    if proc.name().lower().endswith('.exe'):
+                        for game in valid_games:
+                            if game.lower() in proc.name().lower():
+                                processes.append(proc)
+                                break
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                    pass
 
-    def setup_callbacks(self):
-        """Set up the callbacks for the input tracker"""
-        callbacks = {
-            'mouse_move': self.writer.on_mouse_move,
-            'mouse_button': self.writer.on_mouse_button,
-            'mouse_scroll': self.writer.on_mouse_scroll,
-            'keyboard': self.writer.on_keyboard
-        }
-        self.tracker.set_callbacks(callbacks)
+            print("Checked for game")
+            if processes:
+                print("Found game")
+                # Choose the first matching game process
+                self.game_pid = processes[0].pid
+                self.game_name = processes[0].name()
 
-    async def run(self):
-        """Main run loop"""
-        try:
-            # Initialize OBS client
-            self.obs_client = OBSClient(
-                self.recording_path,
-                self.start_recording_callback,
-                self.end_recording_callback
-            )
-            
-            # Set up callbacks
-            self.setup_callbacks()
-            
-            # Start the input tracker
-            self.running = True
-            self.task = asyncio.create_task(self.tracker())
-            
-            # Start OBS recording
-            self.obs_client.start_recording()
-            
-            # Run until stopped
-            while self.running:
-                await asyncio.sleep(0.1)  # Small sleep to reduce CPU usage
+                # Wait for game to be in focus
+                while not self.is_game_in_focus():
+                    await asyncio.sleep(1)
+
+                # Create directory structure
+                game_dir = os.path.join(ROOT_DIR, self.game_name.split('.')[0])
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                recording_dir = os.path.join(game_dir, timestamp)
+                os.makedirs(recording_dir, exist_ok=True)
+
+                # Get full path and use forward slashes
+                obs_recording_path = os.path.abspath(recording_dir).replace('\\', '/')
+
+                print("Time 1")
+                self.obs_client = OBSClient(
+                    recording_path=obs_recording_path,  # OBS will save the MP4 in this directory
+                    start_callback=self.client.writer.start_fn,
+                    end_callback=self.client.writer.end_fn
+                )
+                print("Time 2")
+
+                print("Game Detected. Starting Recording")
+                self.obs_client.start_recording()
                 
-                # Check for input on stdin (for control from Electron)
-                if sys.stdin.isatty():  # Only check if stdin is a TTY
-                    for line in sys.stdin:
-                        if line.strip().upper() == "STOP":
-                            logger.info("Received stop command")
-                            self.stop()
-                            break
-        
-        except Exception as e:
-            logger.error(f"Error in main loop: {e}", exc_info=True)
-        finally:
-            self.stop()
-            if self.task:
-                await self.task
+                csv_filename = os.path.join(recording_dir, "inputs.csv")
+                client_start_time = await self.client.start(csv_filename)
 
-    def stop(self):
-        """Stop recording and tracking"""
-        if not self.running:
-            return
-            
-        self.running = False
-        logger.info("Stopping recording and tracking")
-        
-        # Stop OBS recording if it's active
-        if self.obs_client:
-            try:
+                # Monitor game focus
+                while self.is_game_in_focus():
+                    await asyncio.sleep(1)
+
+                # Game out of focus or closed
                 self.obs_client.stop_recording()
-            except Exception as e:
-                logger.error(f"Error stopping OBS recording: {e}")
+                await self.client.end()
+                del self.obs_client
+                self.obs_client = None
+                self.game_pid = None
+                self.game_name = None
+
+            await asyncio.sleep(1)  # Check every second
+
+    def is_game_in_focus(self):
+        try:
+            fore_hwnd = win32gui.GetForegroundWindow()
+            _, fore_pid = win32process.GetWindowThreadProcessId(fore_hwnd)
+            return fore_pid == self.game_pid
+        except:
+            return False
         
-        # Stop the tracker
-        self.tracker.stop()
-
-async def main():
-    parser = argparse.ArgumentParser(description='VG Control - Video Game Input Tracker')
-    parser.add_argument('--recording-path', type=str, required=True, help='Path where OBS will save recordings')
-    parser.add_argument('--output-path', type=str, required=True, help='Path where input data will be saved')
-    parser.add_argument('--api-key', type=str, required=True, help='API key for data upload')
-    args = parser.parse_args()
-    
-    # Ensure output directory exists
-    output_dir = Path(args.output_path).parent
-    if not output_dir.exists():
-        output_dir.mkdir(parents=True, exist_ok=True)
-    
-    logger.info(f"Starting VG Control with recording path: {args.recording_path}, output path: {args.output_path}")
-    
-    controller = VGControl(args.recording_path, args.output_path, args.api_key)
-    await controller.run()
-
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        logger.info("Keyboard interrupt received, shutting down")
-    except Exception as e:
-        logger.error(f"Unhandled exception: {e}", exc_info=True)
-    finally:
-        logger.info("VG Control has shut down")
+    import asyncio
+
+    async def main():
+        recorder = Recorder()
+        try:
+            await recorder.main()
+        except KeyboardInterrupt:
+            print("Recorder stopped by user.")
+        finally:
+            if recorder.obs_client:
+                recorder.obs_client.stop_recording()
+            if recorder.client:
+                await recorder.client.end()
+
+    asyncio.run(main())
