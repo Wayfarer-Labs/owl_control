@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Video, Play, Square } from 'lucide-react';
+import { Settings, Play, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { AuthService } from '@/services/auth-service';
 import { PythonBridge } from '@/services/python-bridge';
 
 interface WidgetUIProps {

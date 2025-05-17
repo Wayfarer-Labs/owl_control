@@ -28,7 +28,9 @@ export class AuthService {
       const result = await ElectronService.loadCredentials();
       if (result.success && result.data.apiKey) {
         this.apiKey = result.data.apiKey;
-        this.hasConsented = result.data.hasConsented || false;
+        // Convert stored consent value to a strict boolean
+        const consentVal = result.data.hasConsented;
+        this.hasConsented = consentVal === true || consentVal === 'true';
       } else {
         // Try to load from localStorage as fallback
         const storedKey = localStorage.getItem('apiKey');
