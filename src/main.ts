@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { spawn } from 'child_process';
 import { join } from 'path';
+import owlIcon from './assets/owl-emoji.svg';
 
 // Keep references
 let mainWindow: BrowserWindow | null = null;
@@ -267,78 +268,17 @@ function createSettingsWindow() {
 // Create tray icon
 function createTray() {
   try {
-    console.log('Creating tray icon - cyan with dark "OWL" text');
-    
-    // Use a simple 16x16 image created directly with Electron's nativeImage
-    const size = { width: 16, height: 16 };
-    const icon = nativeImage.createEmpty();
-    
-    // Define colors
-    const cyan = { r: 66, g: 226, b: 245, a: 255 };    // #42E2F5 - Cyan background
-    const dark = { r: 12, g: 12, b: 15, a: 255 };      // #0C0C0F - Dark text
-    
-    // Create buffer for the icon
-    const trayIconBuffer = Buffer.alloc(size.width * size.height * 4);
-    
-    // First, fill the entire buffer with cyan (background)
-    for (let i = 0; i < trayIconBuffer.length; i += 4) {
-      trayIconBuffer[i] = cyan.r;     // R
-      trayIconBuffer[i + 1] = cyan.g; // G
-      trayIconBuffer[i + 2] = cyan.b; // B
-      trayIconBuffer[i + 3] = cyan.a; // A
-    }
-    
-    // Define letters with points (1 = dark pixel, 0 = background)
-    const textMap = [
-      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], // Row 0
-      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], // Row 1
-      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], // Row 2
-      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], // Row 3
-      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], // Row 4
-      [0,0,0,1,1,1,0,1,1,1,0,1,0,0,0,0], // Row 5: O W L
-      [0,0,0,1,0,1,0,1,0,1,0,1,0,0,0,0], // Row 6: O W L
-      [0,0,0,1,0,1,0,1,0,1,0,1,0,0,0,0], // Row 7: O W L
-      [0,0,0,1,0,1,0,1,1,1,0,1,0,0,0,0], // Row 8: O W L
-      [0,0,0,1,0,1,0,1,0,1,0,1,0,0,0,0], // Row 9: O W L
-      [0,0,0,1,1,1,0,1,0,1,0,1,1,1,0,0], // Row 10: O W L
-      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], // Row 11
-      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], // Row 12
-      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], // Row 13
-      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], // Row 14
-      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], // Row 15
-    ];
-    
-    // Override the cyan background with text pixels
-    for (let y = 0; y < size.height; y++) {
-      for (let x = 0; x < size.width; x++) {
-        if (textMap[y][x] === 1) {
-          // Calculate position in buffer (4 bytes per pixel)
-          const pos = (y * size.width + x) * 4;
-          // Set the dark pixel for text
-          trayIconBuffer[pos] = dark.r;     // R
-          trayIconBuffer[pos + 1] = dark.g; // G
-          trayIconBuffer[pos + 2] = dark.b; // B
-          trayIconBuffer[pos + 3] = dark.a; // A
-        }
-      }
-    }
-    
-    // Create the icon from the buffer data
-    icon.addRepresentation({
-      width: size.width,
-      height: size.height,
-      buffer: trayIconBuffer,
-      scaleFactor: 1.0
-    });
-    
-    console.log('Created cyan tray icon with OWL text');
-    
-    // Create tray with our icon
+    console.log('Creating tray icon from owl emoji');
+
+    // "owlIcon" is the path to the packaged asset provided by Webpack
+    const icon = nativeImage.createFromPath(owlIcon);
+
+    // Create the tray using the loaded image
     tray = new Tray(icon);
-    
-    // On macOS, we can use a title to ensure visibility
+
+    // On macOS the tray title helps with visibility; use the emoji directly
     if (process.platform === 'darwin') {
-      tray.setTitle('VG');
+      tray.setTitle('🦉');
     }
     
     updateTrayMenu();
