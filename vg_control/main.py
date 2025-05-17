@@ -1,6 +1,5 @@
 import asyncio
 import psutil
-import GPUtil
 from datetime import datetime
 import os
 import win32gui
