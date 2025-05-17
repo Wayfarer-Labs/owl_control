@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, shell, globalShortcut } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { spawn } from 'child_process';
@@ -16,9 +16,30 @@ const secureStore = {
   credentials: {} as Record<string, string>,
   preferences: {
     uploadFrequency: 'one',
-    showRecordButton: true
+    showRecordButton: true,
+    outputPath: getDefaultOutputPath()
   } as Record<string, any>
 };
+
+// Get default output path based on platform
+function getDefaultOutputPath(): string {
+  // Use app's document directory and create a VGControl folder
+  const documentsPath = app.getPath('documents');
+  const vgControlPath = path.join(documentsPath, 'VGControl', 'Recordings');
+  
+  // Ensure the directory exists
+  try {
+    if (!fs.existsSync(vgControlPath)) {
+      fs.mkdirSync(vgControlPath, { recursive: true });
+    }
+  } catch (error) {
+    console.error('Error creating default output directory:', error);
+    // Fallback to documents folder if we can't create the subdirectory
+    return documentsPath;
+  }
+  
+  return vgControlPath;
+}
 
 // Path to store config
 const configPath = join(app.getPath('userData'), 'config.json');
@@ -32,7 +53,11 @@ function loadConfig() {
         secureStore.credentials = config.credentials;
       }
       if (config.preferences) {
-        secureStore.preferences = config.preferences;
+        secureStore.preferences = { ...config.preferences };
+        // Ensure outputPath has a default value if not set
+        if (!secureStore.preferences.outputPath) {
+          secureStore.preferences.outputPath = getDefaultOutputPath();
+        }
       }
     }
   } catch (error) {
@@ -58,6 +83,31 @@ function isAuthenticated() {
     secureStore.credentials.apiKey && 
     secureStore.credentials.hasConsented === 'true'
   );
+}
+
+// Register global shortcuts
+function registerGlobalShortcuts() {
+  // Unregister all existing shortcuts first
+  globalShortcut.unregisterAll();
+  
+  const startKey = secureStore.preferences.startRecordingKey;
+  const stopKey = secureStore.preferences.stopRecordingKey;
+  
+  if (startKey) {
+    globalShortcut.register(startKey, () => {
+      if (!isRecording) {
+        startRecording();
+      }
+    });
+  }
+  
+  if (stopKey) {
+    globalShortcut.register(stopKey, () => {
+      if (isRecording) {
+        stopRecording();
+      }
+    });
+  }
 }
 
 // Create the main window
@@ -538,6 +588,9 @@ app.on('ready', () => {
   // Create the tray
   createTray();
   
+  // Register global shortcuts
+  registerGlobalShortcuts();
+  
   // If not authenticated, show main window for setup
   if (!isAuthenticated()) {
     createMainWindow();
@@ -560,6 +613,7 @@ app.on('activate', () => {
 // Quit app completely when exiting
 app.on('before-quit', () => {
   stopPythonProcess();
+  globalShortcut.unregisterAll();
 });
 
 // Set up IPC handlers
@@ -631,6 +685,8 @@ function setupIpcHandlers() {
     try {
       secureStore.preferences = { ...secureStore.preferences, ...preferences };
       saveConfig();
+      // Re-register global shortcuts with new preferences
+      registerGlobalShortcuts();
       return { success: true };
     } catch (error) {
       console.error('Error saving preferences:', error);
