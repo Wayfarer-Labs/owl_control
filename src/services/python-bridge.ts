@@ -8,6 +8,8 @@ export interface AppPreferences {
   outputPath?: string;
   uploadFrequency?: 'one' | 'daily' | 'weekly' | 'monthly';
   showRecordButton?: boolean;
+  startRecordingKey?: string;
+  stopRecordingKey?: string;
 }
 
 /**
@@ -16,11 +18,41 @@ export interface AppPreferences {
 export class PythonBridge {
   private preferences: AppPreferences = {
     uploadFrequency: 'one',
-    showRecordButton: true
+    showRecordButton: true,
+    outputPath: this.getDefaultOutputPath()
   };
 
   constructor() {
     this.loadPreferences();
+  }
+  
+  private getDefaultOutputPath(): string {
+    // Use app's document directory and create a VGControl folder
+    try {
+      const { app } = require('electron').remote || require('electron');
+      const path = require('path');
+      const fs = require('fs');
+      
+      const documentsPath = app.getPath('documents');
+      const vgControlPath = path.join(documentsPath, 'VGControl', 'Recordings');
+      
+      // Ensure the directory exists
+      if (!fs.existsSync(vgControlPath)) {
+        fs.mkdirSync(vgControlPath, { recursive: true });
+      }
+      
+      return vgControlPath;
+    } catch (error) {
+      console.error('Error getting default output path:', error);
+      // Fallback to documents folder
+      if (process.platform === 'darwin') {
+        return `${process.env.HOME}/Documents/VGControl/Recordings`;
+      } else if (process.platform === 'win32') {
+        return `${process.env.USERPROFILE}\\Documents\\VGControl\\Recordings`;
+      } else {
+        return `${process.env.HOME}/Documents/VGControl/Recordings`;
+      }
+    }
   }
 
   /**
@@ -36,6 +68,10 @@ export class PythonBridge {
               ...this.preferences,
               ...result.data
             };
+            // Ensure outputPath has a default value if not set
+            if (!this.preferences.outputPath) {
+              this.preferences.outputPath = this.getDefaultOutputPath();
+            }
           }
         })
         .catch(error => {
@@ -57,6 +93,11 @@ export class PythonBridge {
       }
     } catch (error) {
       console.error('Error loading preferences:', error);
+    }
+    
+    // Ensure outputPath has a default value if not set
+    if (!this.preferences.outputPath) {
+      this.preferences.outputPath = this.getDefaultOutputPath();
     }
     
     return this.preferences;

@@ -20,6 +20,9 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
   const [showRecordButton, setShowRecordButton] = useState(true);
   const [statusMessage, setStatusMessage] = useState('');
   const [userInfo, setUserInfo] = useState<any>(null);
+  const [startRecordingKey, setStartRecordingKey] = useState('');
+  const [stopRecordingKey, setStopRecordingKey] = useState('');
+  const [recordingKeys, setRecordingKeys] = useState<string[]>([]);
   
   // Define the button styles directly in the component for reliability
   const buttonStyle = {
@@ -72,6 +75,8 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
     if (prefs.outputPath) setOutputPath(prefs.outputPath);
     if (prefs.uploadFrequency) setUploadFrequency(prefs.uploadFrequency);
     if (prefs.showRecordButton !== undefined) setShowRecordButton(prefs.showRecordButton);
+    if (prefs.startRecordingKey) setStartRecordingKey(prefs.startRecordingKey);
+    if (prefs.stopRecordingKey) setStopRecordingKey(prefs.stopRecordingKey);
     
     // Always load user info after preferences
     loadUserInfo();
@@ -112,7 +117,9 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
       recordingPath, 
       outputPath,
       uploadFrequency,
-      showRecordButton
+      showRecordButton,
+      startRecordingKey,
+      stopRecordingKey
     });
   };
   
@@ -175,11 +182,11 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
   };
   
   return (
-    <div className="fixed inset-0 bg-[#0c0c0f] z-50 flex flex-col select-none">
+    <div className="fixed inset-0 bg-[#0c0c0f] z-50 flex flex-col select-none overflow-hidden">
       {/* Draggable header area */}
       <div className="h-8" style={{ WebkitAppRegion: 'drag', '-webkit-app-region': 'drag' } as any}></div>
       
-      <div className="flex flex-col p-6">
+      <div className="flex flex-col p-6 h-full overflow-hidden">
         {/* Header */}
         <div className="mb-6">
         <h1 className="text-2xl font-bold text-white select-none">Settings</h1>
@@ -187,7 +194,7 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
       </div>
       
       {/* Main Content */}
-      <div className="flex-1 space-y-6 overflow-auto">
+      <div className="flex-1 space-y-6 overflow-y-auto overflow-x-hidden pr-2">
         {/* Account Section */}
         {userInfo && (
           <div className="bg-[#13151a] rounded-lg border border-[#2a2d35] p-4">
@@ -274,6 +281,56 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Keyboard Shortcuts */}
+        <div className="bg-[#13151a] rounded-lg border border-[#2a2d35] p-4">
+          <h3 className="mb-4 text-sm font-medium text-white select-none">Keyboard Shortcuts</h3>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="startRecordingKey" className="text-sm text-white select-none">Start Recording</Label>
+              <Input
+                id="startRecordingKey"
+                value={startRecordingKey}
+                onChange={(e) => setStartRecordingKey(e.target.value)}
+                placeholder="e.g., CommandOrControl+Shift+R"
+                className="bg-[#0c0c0f] border-[#2a2d35] text-white"
+                onKeyDown={(e) => {
+                  e.preventDefault();
+                  const keys = [];
+                  if (e.metaKey || e.ctrlKey) keys.push('CommandOrControl');
+                  if (e.shiftKey) keys.push('Shift');
+                  if (e.altKey) keys.push('Alt');
+                  if (e.key && e.key !== 'Control' && e.key !== 'Shift' && e.key !== 'Alt' && e.key !== 'Meta') {
+                    keys.push(e.key.toUpperCase());
+                  }
+                  setStartRecordingKey(keys.join('+'));
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="stopRecordingKey" className="text-sm text-white select-none">Stop Recording</Label>
+              <Input
+                id="stopRecordingKey"
+                value={stopRecordingKey}
+                onChange={(e) => setStopRecordingKey(e.target.value)}
+                placeholder="e.g., CommandOrControl+Shift+S"
+                className="bg-[#0c0c0f] border-[#2a2d35] text-white"
+                onKeyDown={(e) => {
+                  e.preventDefault();
+                  const keys = [];
+                  if (e.metaKey || e.ctrlKey) keys.push('CommandOrControl');
+                  if (e.shiftKey) keys.push('Shift');
+                  if (e.altKey) keys.push('Alt');
+                  if (e.key && e.key !== 'Control' && e.key !== 'Shift' && e.key !== 'Alt' && e.key !== 'Meta') {
+                    keys.push(e.key.toUpperCase());
+                  }
+                  setStopRecordingKey(keys.join('+'));
+                }}
+              />
+              <p className="text-xs text-gray-400">Press the key combination you want to use</p>
             </div>
           </div>
         </div>
