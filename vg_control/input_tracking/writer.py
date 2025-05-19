@@ -22,7 +22,7 @@ SCROLL: [amt : int] (positive = up)
 """
 
 header = ["timestamp", "event_type", "event_args"]
-    
+     
 class DataWriter:
     """
     DataWriter is used to write inputs to a csv file with timestamps using InputTracker.
@@ -31,6 +31,7 @@ class DataWriter:
         self.writing = False
         self.tracker = InputTracker()
         self.current_data = []
+
 
     def get_time_since_last_event(self):
         return self.tracker.get_time_since_last_event()
@@ -126,17 +127,23 @@ class DataWriterClient:
         self.write_path = None
 
     async def start(self, path):
+        """
+        Start recording in a given path (to csv file)
+        """
         self.write_path = path
         self.tracker_task = asyncio.create_task(self.writer.start())
     
     async def end(self):
+        """
+        End recording and return stats from writer (just APM for now)
+        """
         if self.write_path is None or self.tracker_task is None:
             return
         await self.writer.end(self.write_path)
         await self.tracker_task
         self.write_path = None
         self.tracker_task = None
-
+    
 if __name__ == "__main__":
     async def main():
         client = DataWriterClient()

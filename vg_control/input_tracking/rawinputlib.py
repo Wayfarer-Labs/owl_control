@@ -4,6 +4,8 @@ import ctypes
 from ctypes import Structure, c_ulonglong, c_long, c_uint, c_bool
 
 import os
+import time
+import asyncio
 
 class MouseMoveData(Structure):
     _fields_ = [("timestamp", c_ulonglong),
@@ -164,3 +166,35 @@ def wait_until_input(self):
             time.sleep(delay)
     finally:
         reader.close()
+
+class HotkeyManager:
+    def __init__(self):
+        self.reader = RawInputReader()
+        if not self.reader.open():
+            raise RuntimeError("Failed to initialize raw input")
+    
+        self.callbacks = {}
+        self.delay = 1. / FPS / POLLS_PER_FRAME
+
+    async def event_loop(self):
+        while True:
+            asyncio.sleep(self.delay)
+            kb_success, kb_info = self.reader.get_keyboard_input()
+            if not kb_success: # Nothing pressed
+                continue
+            keydown = kb_info[2]
+            if not keydown: # Not a down event
+                continue
+            keycode = kb_info[1]
+            if keycode in self.callbacks:
+                await self.call(keycode)
+
+    async def call(self, keycode):
+        self.callbacks[keycode]()
+
+    def add_callback(self, keycode, fn):
+        self.callbacks[keycode] = fn
+
+class AsyncHotkeyManager(HotkeyManager):
+    async def call(self, keycode):
+        await self.callbacks[keycode]()

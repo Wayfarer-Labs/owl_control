@@ -6,11 +6,13 @@ import win32gui
 import win32process
 import time
 from typing import Optional
+import uuid
 
 from .input_tracking.writer import DataWriterClient
 from .video.obs_client import OBSClient
 from .constants import ROOT_DIR, GAME_LIST
 from .input_tracking.rawinputlib import wait_until_input
+from .metadata import Metadata
 
 class Recorder:
     """
@@ -38,6 +40,9 @@ class Recorder:
         self.is_recording = False
         self.is_interrupted = False
         self.should_end = False
+
+        self.session_id = uuid.uuid4()
+        self.metadata = Metadata(self.session_id)
 
     def _get_game_process(self):
         """Find first matching game process from GAME_LIST"""
@@ -138,6 +143,7 @@ class Recorder:
         
         csv_filename = os.path.join(recording_dir, "inputs.csv")
         await self.client.start(csv_filename)
+        self.metadata.reset(timestamp, recording_dir)
         self.obs_client.start_recording()
 
     async def _interrupt_recording(self):
@@ -145,6 +151,7 @@ class Recorder:
         if self.obs_client:
             self.obs_client.stop_recording()
             await self.client.end()
+            self.metadata.end()
 
     async def _resume_recording(self, new_file=False):
         """Resume recording, optionally to a new file"""
@@ -168,6 +175,8 @@ class Recorder:
             self.obs_client.stop_recording()
         if self.client:
             await self.client.end()
+        if self.metadata:
+            self.metadata.end()
             
         self.obs_client = None
         self.game_pid = None
@@ -206,3 +215,15 @@ class Recorder:
             return
             
         await self._cleanup()
+
+async def main():
+    from .input_tracking.rawinputlib import AsyncHotkeyManager
+
+    recorder = Recorder()
+    hotkeys = AsyncHotkeyManager()
+
+    hotkeys.add_callback(57, recorder.start_recording)
+    hotkeys.add_callback(48, recorder.stop_recording)
+
+if __name__ == "__main__":
+    asyncio.run(main())
