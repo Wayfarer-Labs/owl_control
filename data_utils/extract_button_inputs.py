@@ -1,13 +1,13 @@
 from .config import (
     FPS, 
     ROOT_DIR, 
-    SPLIT_SIZE
+    SPLIT_SIZE,
+    KEYBINDS
 )
 import pandas as pd
 import os
 import torch
 
-from .constants import KEYBINDS, FPS, SPLIT_SIZE, ROOT_DIR
 from .keybinds import CODE_TO_KEY
 
 def get_ascii(keycode_int):
