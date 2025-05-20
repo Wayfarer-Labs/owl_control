@@ -12,7 +12,7 @@ from ..constants import ROOT_DIR, MIN_FOOTAGE, MAX_FOOTAGE
 
 from .input_utils.buttons import get_button_stats
 from .input_utils.mouse import get_mouse_stats
-from ..metadata import get_hwid
+from .uploader import upload_archive
 
 # Directory structure might be nested, but the root dirs will always have a .mp4 and .csv
 
@@ -91,10 +91,6 @@ def filter_invalid_sample(vid_path, csv_path, meta_path, verbose = False):
 
     return False
 
-def upload_helper(tar_path):
-    hwid = get_hwid()
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
 class OWLDataManager:
     def __init__(self):
         self.staged_files = []
@@ -166,11 +162,8 @@ class OWLDataManager:
         tar_name = f"{self.current_tar_uuid}.tar"
         
         try:
-            s3.upload_file(
-                tar_name,
-                "game-data", 
-                tar_name
-            )
+            OWL_TOKEN = None # TODO
+            upload_archive(OWL_TOKEN, tar_name)
         finally:
             # Mark files as uploaded
             for staged_path in self.staged_files:

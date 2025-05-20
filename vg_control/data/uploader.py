@@ -1,16 +1,14 @@
 import os
 from typing import List, Optional
-
+from datetime import datetime
 import requests
 
 from ..constants import API_BASE_URL
-
+from ..metadata import get_hwid
 
 def get_upload_url(
     api_key: str,
     archive_path: str,
-    video_filename: str,
-    control_filename: str,
     tags: Optional[List[str]] = None,
     base_url: str = API_BASE_URL,
 ) -> str:
@@ -19,11 +17,11 @@ def get_upload_url(
     file_size_mb = os.path.getsize(archive_path) // (1024 * 1024)
     payload = {
         "filename": os.path.basename(archive_path),
-        "content_type": "application/x-tar",
+        "content_type": "application/x-tar", 
         "file_size_mb": file_size_mb,
         "expiration": 3600,
-        "video_filename": os.path.basename(video_filename),
-        "control_filename": os.path.basename(control_filename),
+        "uploader_hwid": get_hwid(),
+        "upload_timestamp": datetime.now().isoformat()
     }
     if tags:
         payload["tags"] = tags
@@ -39,8 +37,6 @@ def get_upload_url(
 def upload_archive(
     api_key: str,
     archive_path: str,
-    video_filename: str,
-    control_filename: str,
     tags: Optional[List[str]] = None,
     base_url: str = API_BASE_URL,
 ) -> None:
@@ -49,8 +45,6 @@ def upload_archive(
     upload_url = get_upload_url(
         api_key,
         archive_path,
-        video_filename,
-        control_filename,
         tags=tags,
         base_url=base_url,
     )
