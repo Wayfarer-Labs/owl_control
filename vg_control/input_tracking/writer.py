@@ -4,6 +4,7 @@ import asyncio
 import os
 
 from .tracker import InputTracker
+from ..constants import INACTIVITY_TIME
 
 """
 Quick Rundown on Event Datasets:
@@ -31,10 +32,6 @@ class DataWriter:
         self.writing = False
         self.tracker = InputTracker()
         self.current_data = []
-
-
-    def get_time_since_last_event(self):
-        return self.tracker.get_time_since_last_event()
 
     async def start(self):
         """
@@ -83,10 +80,14 @@ class DataWriter:
 
         self.tracker.set_callbacks(callbacks)
         tracker_task = asyncio.create_task(self.tracker())
-        while self.writing:
-            await asyncio.sleep(0.01)
-        self.tracker.stop()
-        await tracker_task
+
+        try:
+            while self.writing:
+                await asyncio.sleep(0.01)
+
+        finally:
+            await self.tracker.stop()
+            await tracker_task
 
     # Logging start and end from OBS recording directly
     def start_fn(self, time):
@@ -135,12 +136,17 @@ class DataWriterClient:
     
     async def end(self):
         """
-        End recording and return stats from writer (just APM for now)
+        End recording
         """
         if self.write_path is None or self.tracker_task is None:
             return
+
         await self.writer.end(self.write_path)
-        await self.tracker_task
+        
+        # Only wait for tracker task if we're not currently in it
+        if asyncio.current_task() != self.tracker_task:
+            await self.tracker_task
+            
         self.write_path = None
         self.tracker_task = None
     

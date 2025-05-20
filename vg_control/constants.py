@@ -4,6 +4,10 @@ Constants used throughout the application
 
 # Recording settings
 FPS = 60  # Frames per second for tracking
+MIN_FOOTAGE = 60 # This many seconds needed before something is "worth saving"
+MAX_FOOTAGE = 60 * 10 # How long should each individual clip be?
+INACTIVITY_TIME = 20 # No input for this long = stop recording
+TIME_TO_STOP = 2.5 # How long do we think it will take OBS to stop recording?
 
 # API endpoints
 API_BASE_URL = "https://api.openworldlabs.com"
@@ -15,5 +19,6 @@ ROOT_DIR = "./data_dump/games/" # User should be able to set this, but we will n
 POLLS_PER_FRAME=20 # Hard coded
 
 GAME_LIST = [
-    
+    'geometrydash',
+    'doomthedarkages'
 ]

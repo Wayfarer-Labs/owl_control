@@ -1,6 +1,8 @@
 import os
 import pandas as pd
 from datetime import datetime
+import time
+import json
 
 class Metadata:
     """
@@ -25,7 +27,6 @@ class Metadata:
             except:
                 self.hardware_id = None
         
-
     def reset(self, timestamp, path):
         self.data = {
             'session-id': self.session_id,
@@ -33,14 +34,19 @@ class Metadata:
             'start-timestamp': timestamp
         }
         self.path = path
+        self.start_time = time.time()
 
+    def get_duration(self):
+        return time.time() - self.start_time
+    
     def end(self):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.data.update({
-            'end-timestamp': timestamp
+            'end-timestamp': timestamp,
+            'duration' : self.get_duration()
         })
 
-        import json
         metadata_path = os.path.join(self.path, "metadata.json")
+        
         with open(metadata_path, 'w') as f:
             json.dump(self.data, f, indent=4)

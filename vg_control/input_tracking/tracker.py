@@ -1,7 +1,7 @@
 import time
 import asyncio
 
-from .rawinputlib import RawInputReader
+from .rawinputlib import RAW_INPUT
 from .spam_block import SpamBlock
 from ..constants import FPS, POLLS_PER_FRAME
 
@@ -10,7 +10,7 @@ from ..constants import FPS, POLLS_PER_FRAME
 # note that we cut out timestamp as its preferable to just get timestamp in python
 class InputTracker:
     def __init__(self):
-        self.raw_input_reader = RawInputReader()
+        self.raw_input_reader = RAW_INPUT
         self.running = False
         self.callbacks = {}
         self.polling_delay = 1. / (FPS * POLLS_PER_FRAME)
@@ -29,15 +29,13 @@ class InputTracker:
 
 
     async def __call__(self):
-        if not self.raw_input_reader.open():
-            raise RuntimeError("Failed to initialize raw input")
-
         self.running = True
         try:
             self.kb_spam_blocker = SpamBlock()
             self.mb_spam_blocker = SpamBlock()
             self.callbacks['keyboard'] = self.kb_spam_blocker.decorate(self.callbacks['keyboard'])
             self.callbacks['mouse_button'] = self.mb_spam_blocker.decorate(self.callbacks['mouse_button'])
+
             while self.running:
                 any_event = False
                 mouse_move_success, mouse_move_data = self.raw_input_reader.get_mouse_move_input()
@@ -65,11 +63,10 @@ class InputTracker:
 
                 await asyncio.sleep(self.polling_delay)  # Small sleep to reduce CPU usage
         finally:
-            self.raw_input_reader.close()
             self.kb_spam_blocker = None
             self.mb_spam_blocker = None
 
-    def stop(self):
+    async def stop(self):
         self.running = False
 
 if __name__ == "__main__":

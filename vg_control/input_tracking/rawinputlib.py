@@ -7,6 +7,8 @@ import os
 import time
 import asyncio
 
+from .keybinds import CODE_TO_KEY
+
 class MouseMoveData(Structure):
     _fields_ = [("timestamp", c_ulonglong),
                 ("dx", c_long),
@@ -79,6 +81,7 @@ class RawInputReader:
         Returns bool indicating success
         """
         return self.rawinput_lib.initialize_raw_input()
+
     
     def close(self):
         """
@@ -136,14 +139,16 @@ class RawInputReader:
 
 from ..constants import POLLS_PER_FRAME, FPS
 
-def wait_until_input(self):
+RAW_INPUT = RawInputReader()
+if not RAW_INPUT.open():
+    raise RuntimeError("Failed to initialize raw input")
+
+async def wait_until_input():
     """
     Blocks until any input is detected then 
     """
     delay = 1. / FPS / POLLS_PER_FRAME
-    reader = RawInputReader()
-    if not reader.open():
-        raise RuntimeError("Failed to initialize raw input")
+    reader = RAW_INPUT
 
     try:
         while True:
@@ -163,22 +168,57 @@ def wait_until_input(self):
             if keyboard_success:
                 return
 
-            time.sleep(delay)
-    finally:
-        reader.close()
+            await asyncio.sleep(delay)
+    except:
+        return
+    
+async def wait_until_idle(max_idle_time):
+    delay = 1. / FPS / POLLS_PER_FRAME
+    idle_counter = 0
+    reader = RAW_INPUT
+    last_time = time.perf_counter()
+
+    try:
+        while True:
+            mouse_move_success, _ = reader.get_mouse_move_input()
+            if mouse_move_success:
+                idle_counter = 0
+
+            mouse_button_success, _ = reader.get_mouse_button_input() 
+            if mouse_button_success:
+                idle_counter = 0
+
+            mouse_scroll_success, _ = reader.get_mouse_scroll_input()
+            if mouse_scroll_success:
+                idle_counter = 0
+
+            keyboard_success, _ = reader.get_keyboard_input()
+            if keyboard_success:
+                idle_counter = 0
+
+            await asyncio.sleep(delay)
+            time_delta = time.perf_counter() - last_time
+            last_time = time.perf_counter()
+            idle_counter += time_delta
+
+            if idle_counter > max_idle_time:
+                return
+    except asyncio.CancelledError:
+        raise
+    except:
+        return
 
 class HotkeyManager:
     def __init__(self):
-        self.reader = RawInputReader()
-        if not self.reader.open():
-            raise RuntimeError("Failed to initialize raw input")
-    
+        self.reader = RAW_INPUT
         self.callbacks = {}
         self.delay = 1. / FPS / POLLS_PER_FRAME
 
+        self.tasks = set()
+
     async def event_loop(self):
         while True:
-            asyncio.sleep(self.delay)
+            await asyncio.sleep(self.delay)
             kb_success, kb_info = self.reader.get_keyboard_input()
             if not kb_success: # Nothing pressed
                 continue
@@ -187,14 +227,20 @@ class HotkeyManager:
                 continue
             keycode = kb_info[1]
             if keycode in self.callbacks:
+                # Create a new task instead of awaiting directly
                 await self.call(keycode)
+                #task = asyncio.create_task(self.call(keycode))
+                #self.tasks.add(task)
+                #task.add_done_callback(self.tasks.discard)
 
-    async def call(self, keycode):
-        self.callbacks[keycode]()
-
-    def add_callback(self, keycode, fn):
-        self.callbacks[keycode] = fn
-
-class AsyncHotkeyManager(HotkeyManager):
     async def call(self, keycode):
         await self.callbacks[keycode]()
+
+    def add_callback(self, keycode, fn):
+        if not isinstance(keycode, int):
+            keycode = keycode.upper()
+            try:
+                keycode = {k for k,v in CODE_TO_KEY.items() if v == keycode}.pop()
+            except:
+                raise ValueError("Key {keycode} not supported by hotkey manager.")
+        self.callbacks[keycode] = fn
