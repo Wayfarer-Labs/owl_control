@@ -4,6 +4,20 @@ from datetime import datetime
 import time
 import json
 
+def get_hwid():
+    try:
+        with open('/sys/class/dmi/id/product_uuid', 'r') as f:
+            hardware_id = f.read().strip()
+    except:
+        try:
+            # Fallback for Windows
+            import subprocess
+            output = subprocess.check_output('wmic csproduct get uuid').decode()
+            hardware_id = output.split('\n')[1].strip()
+        except:
+            hardware_id = None
+    return hardware_id
+
 class Metadata:
     """
     When constructed, gets several pieces of information about the users setup.
@@ -14,18 +28,7 @@ class Metadata:
         self.data = {}
         self.path = None
         
-        # Get hardware UUID
-        try:
-            with open('/sys/class/dmi/id/product_uuid', 'r') as f:
-                self.hardware_id = f.read().strip()
-        except:
-            try:
-                # Fallback for Windows
-                import subprocess
-                output = subprocess.check_output('wmic csproduct get uuid').decode()
-                self.hardware_id = output.split('\n')[1].strip()
-            except:
-                self.hardware_id = None
+        self.hardware_id = get_hwid()
         
     def reset(self, timestamp, path):
         self.data = {
@@ -47,6 +50,6 @@ class Metadata:
         })
 
         metadata_path = os.path.join(self.path, "metadata.json")
-        
+
         with open(metadata_path, 'w') as f:
             json.dump(self.data, f, indent=4)
