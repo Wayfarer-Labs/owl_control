@@ -92,10 +92,11 @@ def filter_invalid_sample(vid_path, csv_path, meta_path, verbose = False):
     return False
 
 class OWLDataManager:
-    def __init__(self):
+    def __init__(self, token):
         self.staged_files = []
         self.staging_dir = "staging"
         self.current_tar_uuid = None
+        self.token = token
         os.makedirs(self.staging_dir, exist_ok=True)
 
     def stage(self, verbose = False):
@@ -189,11 +190,30 @@ class OWLDataManager:
                 shutil.rmtree(root)
 
 
-def upload_all_files(delete_uploaded = True):
+def upload_all_files(token, delete_uploaded=False):
     manager = OWLDataManager()
     manager.stage()
     manager.compress()
-    manager.upload()
+    manager.upload(token)
 
     if delete_uploaded:
         manager.delete_uploaded()
+
+if __name__ == "__main__":
+    import sys
+    
+    if len(sys.argv) < 2:
+        print("Error: Token argument is required")
+        sys.exit(1)
+        
+    token = sys.argv[1]
+    del_uploaded = False
+    if len(sys.argv) > 2:
+        del_uploaded = sys.argv[2].lower() == 'true'
+
+    try:
+        upload_all_files(token, delete_uploaded=del_uploaded)
+        print("Upload completed successfully")
+    except Exception as e:
+        print(f"Error during upload: {str(e)}")
+        sys.exit(1)
