@@ -3,6 +3,7 @@ import json
 import sys
 from vg_control.recorder import SimpleRecorder, main as recorder_main
 from vg_control.input_tracking.rawinputlib import HotkeyManager, RAW_INPUT
+from vg_control.input_tracking.keybinds import CODE_TO_KEY
 
 class RecorderBridge:
     def __init__(self, start_key, stop_key):
@@ -32,10 +33,17 @@ async def bridge_main():
     if len(sys.argv) != 3:
         start_key = 'F4'
         stop_key = 'F5'
-    else:  
-        start_key = sys.argv[1]
-        stop_key = sys.argv[2]
-    
+    else:
+        # Check if provided keys are in CODE_TO_KEY mapping
+        try:
+            start_code = int(sys.argv[1])
+            stop_code = int(sys.argv[2])
+            start_key = CODE_TO_KEY.get(start_code, 'F4')
+            stop_key = CODE_TO_KEY.get(stop_code, 'F5')
+        except ValueError:
+            # If not valid integers, use defaults
+            start_key = 'F4'
+            stop_key = 'F5'
     bridge = RecorderBridge(start_key, stop_key)
     await bridge.run()
 
