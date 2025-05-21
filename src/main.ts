@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, shell, globalShortcut } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, shell } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import { spawn } from 'child_process';
@@ -15,31 +15,13 @@ let isRecording = false;
 const secureStore = {
   credentials: {} as Record<string, string>,
   preferences: {
-    uploadFrequency: 'one',
-    showRecordButton: true,
-    outputPath: getDefaultOutputPath()
+    startRecordingKey: 'f4',
+    stopRecordingKey: 'f5',
+    apiToken: '',
+    deleteUploadedFiles: false
   } as Record<string, any>
 };
 
-// Get default output path based on platform
-function getDefaultOutputPath(): string {
-  // Use app's document directory and create a VGControl folder
-  const documentsPath = app.getPath('documents');
-  const vgControlPath = path.join(documentsPath, 'VGControl', 'Recordings');
-  
-  // Ensure the directory exists
-  try {
-    if (!fs.existsSync(vgControlPath)) {
-      fs.mkdirSync(vgControlPath, { recursive: true });
-    }
-  } catch (error) {
-    console.error('Error creating default output directory:', error);
-    // Fallback to documents folder if we can't create the subdirectory
-    return documentsPath;
-  }
-  
-  return vgControlPath;
-}
 
 // Path to store config
 const configPath = join(app.getPath('userData'), 'config.json');
@@ -54,9 +36,12 @@ function loadConfig() {
       }
       if (config.preferences) {
         secureStore.preferences = { ...config.preferences };
-        // Ensure outputPath has a default value if not set
-        if (!secureStore.preferences.outputPath) {
-          secureStore.preferences.outputPath = getDefaultOutputPath();
+        // Ensure hotkeys have default values if not set
+        if (!secureStore.preferences.startRecordingKey) {
+          secureStore.preferences.startRecordingKey = 'f4';
+        }
+        if (!secureStore.preferences.stopRecordingKey) {
+          secureStore.preferences.stopRecordingKey = 'f5';
         }
       }
     }
@@ -85,30 +70,7 @@ function isAuthenticated() {
   );
 }
 
-// Register global shortcuts
-function registerGlobalShortcuts() {
-  // Unregister all existing shortcuts first
-  globalShortcut.unregisterAll();
-  
-  const startKey = secureStore.preferences.startRecordingKey;
-  const stopKey = secureStore.preferences.stopRecordingKey;
-  
-  if (startKey) {
-    globalShortcut.register(startKey, () => {
-      if (!isRecording) {
-        startRecording();
-      }
-    });
-  }
-  
-  if (stopKey) {
-    globalShortcut.register(stopKey, () => {
-      if (isRecording) {
-        stopRecording();
-      }
-    });
-  }
-}
+// Note: Hotkeys are handled by the Python recording bridge
 
 // Create the main window
 function createMainWindow() {
@@ -425,19 +387,8 @@ function updateTrayMenu() {
   
   menuTemplate.push({ type: 'separator' });
   
-  // Add recording controls if authenticated
+  // Remove recording controls from menu as Python bridge handles this independently
   if (isAuthenticated()) {
-    if (isRecording) {
-      menuTemplate.push({
-        label: 'Stop Recording',
-        click: stopRecording
-      });
-    } else {
-      menuTemplate.push({
-        label: 'Start Recording',
-        click: startRecording
-      });
-    }
     
     menuTemplate.push({ type: 'separator' });
     
@@ -478,103 +429,87 @@ function updateTrayMenu() {
   tray.setToolTip(isRecording ? 'VG Control - Recording' : 'VG Control');
 }
 
-// Start recording
-function startRecording() {
-  if (!isAuthenticated()) return;
+// Start Python bridges after authentication
 
-  const recordingPath = secureStore.preferences.recordingPath;
-  const outputPath = secureStore.preferences.outputPath;
-
-  if (!recordingPath || !outputPath) {
-    dialog.showMessageBox({
-      type: 'error',
-      title: 'Configuration Missing',
-      message: 'Please set recording and output paths in settings.'
-    });
-    return;
-  }
-
-  startPythonProcess(recordingPath, outputPath);
-  updateTrayMenu();
-}
-
-// Stop recording
-function stopRecording() {
-  stopPythonProcess();
-  updateTrayMenu();
-}
-
-// Start Python tracking process
-function startPythonProcess(recordingPath: string, outputPath: string) {
+// Start Python recording bridge
+function startRecordingBridge(startKey: string, stopKey: string) {
   try {
     // Stop existing process if running
-    stopPythonProcess();
-
-    // Path to Python script
-    const scriptPath = path.join(__dirname, '..', 'vg_control', 'main.py');
-    
-    // Check if the file exists
-    if (!fs.existsSync(scriptPath)) {
-      console.error(`Python script not found at: ${scriptPath}`);
-      return false;
+    if (pythonProcess) {
+      pythonProcess.kill();
+      pythonProcess = null;
     }
 
-    // Launch Python process
+    // Set the working directory to the project root
+    const projectRoot = path.join(__dirname, '..');
+    
+    console.log(`Starting recording bridge module from vg_control package`);
+    
     pythonProcess = spawn('python', [
-      scriptPath,
-      '--recording-path', recordingPath,
-      '--output-path', outputPath,
-      '--api-key', secureStore.credentials.apiKey || ''
-    ]);
+      '-m',
+      'vg_control.recording_bridge',
+      '--start-key', startKey,
+      '--stop-key', stopKey
+    ], {
+      cwd: projectRoot,
+    });
 
     // Handle output
     pythonProcess.stdout.on('data', (data: Buffer) => {
-      console.log(`Python stdout: ${data.toString()}`);
+      console.log(`Recording bridge stdout: ${data.toString()}`);
     });
 
     pythonProcess.stderr.on('data', (data: Buffer) => {
-      console.error(`Python stderr: ${data.toString()}`);
+      console.error(`Recording bridge stderr: ${data.toString()}`);
     });
 
     pythonProcess.on('close', (code: number) => {
-      console.log(`Python process exited with code ${code}`);
+      console.log(`Recording bridge process exited with code ${code}`);
       pythonProcess = null;
-      isRecording = false;
-      updateTrayMenu();
     });
 
-    isRecording = true;
     return true;
   } catch (error) {
-    console.error('Error starting Python process:', error);
+    console.error('Error starting recording bridge:', error);
     return false;
   }
 }
 
-// Stop Python tracking process
-function stopPythonProcess() {
-  if (pythonProcess) {
-    try {
-      // Gracefully signal Python process to stop
-      pythonProcess.stdin.write('STOP\n');
-      
-      // Give it a second to clean up
-      setTimeout(() => {
-        if (pythonProcess) {
-          // Force kill if still running
-          pythonProcess.kill();
-          pythonProcess = null;
-        }
-      }, 1000);
-      
-      isRecording = false;
-      return true;
-    } catch (error) {
-      console.error('Error stopping Python process:', error);
-      return false;
-    }
+// Start Python upload bridge
+function startUploadBridge(apiToken: string, deleteUploadedFiles: boolean) {
+  try {
+    // Set the working directory to the project root
+    const projectRoot = path.join(__dirname, '..');
+    
+    console.log(`Starting upload bridge module from vg_control package`);
+    
+    const uploadProcess = spawn('python', [
+      '-m',
+      'vg_control.upload_bridge',
+      '--api-token', apiToken,
+      ...(deleteUploadedFiles ? ['--delete-uploaded-files'] : [])
+    ], {
+      cwd: projectRoot,
+    });
+
+    // Handle output
+    uploadProcess.stdout.on('data', (data: Buffer) => {
+      console.log(`Upload bridge stdout: ${data.toString()}`);
+    });
+
+    uploadProcess.stderr.on('data', (data: Buffer) => {
+      console.error(`Upload bridge stderr: ${data.toString()}`);
+    });
+
+    uploadProcess.on('close', (code: number) => {
+      console.log(`Upload bridge process exited with code ${code}`);
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Error starting upload bridge:', error);
+    return false;
   }
-  return true;
 }
 
 // App ready event
@@ -588,8 +523,19 @@ app.on('ready', () => {
   // Create the tray
   createTray();
   
-  // Register global shortcuts
-  registerGlobalShortcuts();
+  // Start the Python bridges if authenticated
+  if (isAuthenticated()) {
+    const startKey = secureStore.preferences.startRecordingKey || 'f4';
+    const stopKey = secureStore.preferences.stopRecordingKey || 'f5';
+    const apiToken = secureStore.credentials.apiKey || '';
+    const deleteUploadedFiles = secureStore.preferences.deleteUploadedFiles || false;
+    
+    // Start the recording bridge
+    startRecordingBridge(startKey, stopKey);
+    
+    // Start the upload bridge
+    startUploadBridge(apiToken, deleteUploadedFiles);
+  }
   
   // If not authenticated, show main window for setup
   if (!isAuthenticated()) {
@@ -612,8 +558,13 @@ app.on('activate', () => {
 
 // Quit app completely when exiting
 app.on('before-quit', () => {
-  stopPythonProcess();
-  globalShortcut.unregisterAll();
+  // Kill any running Python processes
+  if (pythonProcess) {
+    pythonProcess.kill();
+    pythonProcess = null;
+  }
+  
+  // Additional cleanup if needed
 });
 
 // Set up IPC handlers
@@ -685,8 +636,21 @@ function setupIpcHandlers() {
     try {
       secureStore.preferences = { ...secureStore.preferences, ...preferences };
       saveConfig();
-      // Re-register global shortcuts with new preferences
-      registerGlobalShortcuts();
+      
+      // Restart the Python bridges with new preferences if authenticated
+      if (isAuthenticated()) {
+        const startKey = secureStore.preferences.startRecordingKey || 'f4';
+        const stopKey = secureStore.preferences.stopRecordingKey || 'f5';
+        const apiToken = secureStore.credentials.apiKey || '';
+        const deleteUploadedFiles = secureStore.preferences.deleteUploadedFiles || false;
+        
+        // Restart the recording bridge
+        startRecordingBridge(startKey, stopKey);
+        
+        // Restart the upload bridge
+        startUploadBridge(apiToken, deleteUploadedFiles);
+      }
+      
       return { success: true };
     } catch (error) {
       console.error('Error saving preferences:', error);
@@ -704,18 +668,14 @@ function setupIpcHandlers() {
     }
   });
 
-  // Start recording
-  ipcMain.handle('start-recording', async (_, recordingPath: string, outputPath: string) => {
-    const success = startPythonProcess(recordingPath, outputPath);
-    updateTrayMenu();
-    return success;
+  // Start recording bridge
+  ipcMain.handle('start-recording-bridge', async (_, startKey: string, stopKey: string) => {
+    return startRecordingBridge(startKey, stopKey);
   });
 
-  // Stop recording
-  ipcMain.handle('stop-recording', async () => {
-    const success = stopPythonProcess();
-    updateTrayMenu();
-    return success;
+  // Start upload bridge
+  ipcMain.handle('start-upload-bridge', async (_, apiToken: string, deleteUploadedFiles: boolean) => {
+    return startUploadBridge(apiToken, deleteUploadedFiles);
   });
 
   // Close settings window
@@ -729,6 +689,18 @@ function setupIpcHandlers() {
   // Authentication completed
   ipcMain.handle('authentication-completed', async () => {
     updateTrayMenu();
+    
+    // Start the Python bridges after authentication
+    const startKey = secureStore.preferences.startRecordingKey || 'f4';
+    const stopKey = secureStore.preferences.stopRecordingKey || 'f5';
+    const apiToken = secureStore.credentials.apiKey || '';
+    const deleteUploadedFiles = secureStore.preferences.deleteUploadedFiles || false;
+    
+    // Start the recording bridge
+    startRecordingBridge(startKey, stopKey);
+    
+    // Start the upload bridge
+    startUploadBridge(apiToken, deleteUploadedFiles);
     
     // Close main window if it exists
     if (mainWindow) {

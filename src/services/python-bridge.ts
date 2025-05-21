@@ -4,12 +4,10 @@ import { ElectronService } from './electron-service';
  * Interface for app preferences
  */
 export interface AppPreferences {
-  recordingPath?: string;
-  outputPath?: string;
-  uploadFrequency?: 'one' | 'daily' | 'weekly' | 'monthly';
-  showRecordButton?: boolean;
   startRecordingKey?: string;
   stopRecordingKey?: string;
+  apiToken?: string;
+  deleteUploadedFiles?: boolean;
 }
 
 /**
@@ -17,44 +15,16 @@ export interface AppPreferences {
  */
 export class PythonBridge {
   private preferences: AppPreferences = {
-    uploadFrequency: 'one',
-    showRecordButton: true,
-    outputPath: this.getDefaultOutputPath()
+    startRecordingKey: 'f4',
+    stopRecordingKey: 'f5',
+    apiToken: '',
+    deleteUploadedFiles: false
   };
 
   constructor() {
     this.loadPreferences();
   }
   
-  private getDefaultOutputPath(): string {
-    // Use app's document directory and create a VGControl folder
-    try {
-      const { app } = require('electron').remote || require('electron');
-      const path = require('path');
-      const fs = require('fs');
-      
-      const documentsPath = app.getPath('documents');
-      const vgControlPath = path.join(documentsPath, 'VGControl', 'Recordings');
-      
-      // Ensure the directory exists
-      if (!fs.existsSync(vgControlPath)) {
-        fs.mkdirSync(vgControlPath, { recursive: true });
-      }
-      
-      return vgControlPath;
-    } catch (error) {
-      console.error('Error getting default output path:', error);
-      // Fallback to documents folder
-      if (process.platform === 'darwin') {
-        return `${process.env.HOME}/Documents/VGControl/Recordings`;
-      } else if (process.platform === 'win32') {
-        return `${process.env.USERPROFILE}\\Documents\\VGControl\\Recordings`;
-      } else {
-        return `${process.env.HOME}/Documents/VGControl/Recordings`;
-      }
-    }
-  }
-
   /**
    * Load preferences from storage
    */
@@ -68,9 +38,12 @@ export class PythonBridge {
               ...this.preferences,
               ...result.data
             };
-            // Ensure outputPath has a default value if not set
-            if (!this.preferences.outputPath) {
-              this.preferences.outputPath = this.getDefaultOutputPath();
+            // Ensure hotkeys have default values if not set
+            if (!this.preferences.startRecordingKey) {
+              this.preferences.startRecordingKey = 'f4';
+            }
+            if (!this.preferences.stopRecordingKey) {
+              this.preferences.stopRecordingKey = 'f5';
             }
           }
         })
@@ -95,9 +68,12 @@ export class PythonBridge {
       console.error('Error loading preferences:', error);
     }
     
-    // Ensure outputPath has a default value if not set
-    if (!this.preferences.outputPath) {
-      this.preferences.outputPath = this.getDefaultOutputPath();
+    // Ensure hotkeys have default values if not set
+    if (!this.preferences.startRecordingKey) {
+      this.preferences.startRecordingKey = 'f4';
+    }
+    if (!this.preferences.stopRecordingKey) {
+      this.preferences.stopRecordingKey = 'f5';
     }
     
     return this.preferences;
@@ -131,47 +107,27 @@ export class PythonBridge {
   }
 
   /**
-   * Start recording
+   * Start recording bridge
    */
-  public async startRecording(recordingPath: string, outputPath: string): Promise<boolean> {
+  public async startRecordingBridge(): Promise<boolean> {
     try {
-      // Call Electron service to start Python recording process
-      return await ElectronService.startRecording(recordingPath, outputPath);
+      // Call Electron service to start Python recording bridge process
+      return await ElectronService.startRecordingBridge(this.preferences.startRecordingKey, this.preferences.stopRecordingKey);
     } catch (error) {
-      console.error('Error starting recording:', error);
+      console.error('Error starting recording bridge:', error);
       return false;
     }
   }
 
   /**
-   * Stop recording
+   * Start upload bridge
    */
-  public async stopRecording(): Promise<boolean> {
+  public async startUploadBridge(): Promise<boolean> {
     try {
-      // Call Electron service to stop Python recording process
-      return await ElectronService.stopRecording();
+      // Call Electron service to start Python upload bridge process
+      return await ElectronService.startUploadBridge(this.preferences.apiToken || '', this.preferences.deleteUploadedFiles || false);
     } catch (error) {
-      console.error('Error stopping recording:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Upload recorded data
-   */
-  public async uploadRecordedData(options: {
-    videoFilePath: string;
-    controlFilePath: string;
-    tags?: string[];
-  }): Promise<boolean> {
-    try {
-      // In a real implementation, this would call into the Python script
-      // or the Electron main process to handle the upload
-      
-      // For now, just return success
-      return true;
-    } catch (error) {
-      console.error('Error uploading recorded data:', error);
+      console.error('Error starting upload bridge:', error);
       return false;
     }
   }
