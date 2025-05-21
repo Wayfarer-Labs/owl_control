@@ -191,10 +191,10 @@ class OWLDataManager:
 
 
 def upload_all_files(token, delete_uploaded=False):
-    manager = OWLDataManager()
+    manager = OWLDataManager(token)
     manager.stage()
     manager.compress()
-    manager.upload(token)
+    manager.upload()
 
     if delete_uploaded:
         manager.delete_uploaded()

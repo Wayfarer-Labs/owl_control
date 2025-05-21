@@ -1,9 +1,9 @@
 import asyncio
 import json
 import sys
-from vg_control.recorder import SimpleRecorder, main as recorder_main
-from vg_control.input_tracking.rawinputlib import HotkeyManager, RAW_INPUT
-from vg_control.input_tracking.keybinds import CODE_TO_KEY
+from .recorder import SimpleRecorder, main as recorder_main
+from .input_tracking.rawinputlib import HotkeyManager, RAW_INPUT
+from .input_tracking.keybinds import CODE_TO_KEY
 
 class RecorderBridge:
     def __init__(self, start_key, stop_key):
@@ -29,21 +29,23 @@ class RecorderBridge:
             RAW_INPUT.close()
 
 async def bridge_main():
-    # Get hotkeys from command line args
-    if len(sys.argv) != 3:
-        start_key = 'F4'
-        stop_key = 'F5'
-    else:
-        # Check if provided keys are in CODE_TO_KEY mapping
-        try:
-            start_code = int(sys.argv[1])
-            stop_code = int(sys.argv[2])
-            start_key = CODE_TO_KEY.get(start_code, 'F4')
-            stop_key = CODE_TO_KEY.get(stop_code, 'F5')
-        except ValueError:
-            # If not valid integers, use defaults
-            start_key = 'F4'
-            stop_key = 'F5'
+    import argparse
+    
+    # Set up argument parser
+    parser = argparse.ArgumentParser(description='Recording Bridge')
+    parser.add_argument('--start-key', type=str, default='F4', help='Start recording hotkey')
+    parser.add_argument('--stop-key', type=str, default='F5', help='Stop recording hotkey')
+    
+    # Parse args (skip the first arg which is the script name)
+    args = parser.parse_args()
+    
+    start_key = args.start_key
+    stop_key = args.stop_key
+    
+    # Print detected keys
+    print(f"Recording bridge using hotkeys: Start={start_key}, Stop={stop_key}")
+    sys.stdout.flush()
+    
     bridge = RecorderBridge(start_key, stop_key)
     await bridge.run()
 
