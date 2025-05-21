@@ -25,8 +25,6 @@ class RecorderBridge:
         except Exception as e:
             print(json.dumps({"status": "error", "error": str(e)}))
             sys.stdout.flush()
-        finally:
-            RAW_INPUT.close()
 
 async def bridge_main():
     import argparse
@@ -46,8 +44,20 @@ async def bridge_main():
     print(f"Recording bridge using hotkeys: Start={start_key}, Stop={stop_key}")
     sys.stdout.flush()
     
-    bridge = RecorderBridge(start_key, stop_key)
-    await bridge.run()
+    while True:
+        try:
+            bridge = RecorderBridge(start_key, stop_key)
+            await bridge.run()
+        except Exception as e:
+            print(json.dumps({"status": "error", "error": str(e)}))
+            sys.stdout.flush()
+            # Clean up the bridge if it exists
+            if 'bridge' in locals():
+                del bridge
+            await asyncio.sleep(1)  # Brief pause before restarting
+            continue
+        finally:
+            RAW_INPUT.close()
 
 if __name__ == "__main__":
     asyncio.run(bridge_main())

@@ -108,8 +108,21 @@ class DataWriter:
         self.writing = False
         while self.tracker.running: # Don't continue until tracker is done adding stuff
             await asyncio.sleep(0.01)
+        await asyncio.sleep(0.5)
 
-        df = pd.DataFrame(self.current_data, columns=header)
+        original_length = len(self.current_data)
+        
+        # Validate and clean data
+        clean_data = [
+            {col: row.get(col) for col in header}
+            for row in self.current_data
+            if all(key in row for key in header)
+        ]
+        
+        if len(clean_data) != original_length:
+            print(f"Warning: Dropped {original_length - len(clean_data)} malformed rows")
+
+        df = pd.DataFrame(clean_data, columns=header)
         if "/" in file_path:
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
         df.to_csv(file_path, index=False)
