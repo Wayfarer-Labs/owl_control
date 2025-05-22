@@ -127,9 +127,8 @@ class PeekableReader:
         return data
 
     def peek(self) -> Optional[Tuple]:
-        if not isinstance(self.peeked_data, Empty):
-            return self.peeked_data
-        self.peeked_data = self.reader.get()
+        if isinstance(self.peeked_data, Empty):
+            self.peeked_data = self.reader.get()
         return self.peeked_data
 
 class RawInputReader:
