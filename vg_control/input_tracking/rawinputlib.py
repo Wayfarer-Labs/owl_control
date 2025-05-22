@@ -35,40 +35,79 @@ def keycode_to_key(key: int):
     except ValueError:
         return None
 
+class RawInputLib:
+    def __init__(self, dll_path = "./rawinputlib.dll"):
+        self.dll_path = dll_path
+        self._load_dll()
+        self._set_types()
+
+    def _load_dll(self):
+        import os
+
+        self.cdll = None
+        try:
+            self.cdll = ctypes.CDLL(self.dll_path)
+        except OSError:
+            for root, dirs, files in os.walk('.'):
+                if 'rawinputlib.dll' in files:
+                    dll_path = os.path.join(root, 'rawinputlib.dll')
+                    try:
+                        self.cdll = ctypes.CDLL(dll_path)
+                        self.dll_path = dll_path
+                        break
+                    except OSError:
+                        continue
+        finally:
+            if self.cdll is None:
+                raise FileNotFoundError(f"Could not find or load rawinputlib dll.")
+
+    def _set_types(self):
+        self.cdll.initialize_raw_input.restype = ctypes.c_int
+        self.cdll.get_mouse_move_input.argtypes = [ctypes.POINTER(MouseMoveData)]
+        self.cdll.get_mouse_move_input.restype = ctypes.c_int
+        self.cdll.get_mouse_button_input.argtypes = [ctypes.POINTER(MouseButtonData)]
+        self.cdll.get_mouse_button_input.restype = ctypes.c_int
+        self.cdll.get_mouse_scroll_input.argtypes = [ctypes.POINTER(MouseScrollData)]
+        self.cdll.get_mouse_scroll_input.restype = ctypes.c_int
+        self.cdll.get_keyboard_input.argtypes = [ctypes.POINTER(KeyboardData)]
+        self.cdll.get_keyboard_input.restype = ctypes.c_int
+        self.cdll.cleanup_raw_input.restype = None
+
+
 class MouseMoveInputReader:
-    def __init__(self, rawinput_lib):
+    def __init__(self, rawinput_lib: RawInputLib):
         self.rawinput_lib = rawinput_lib
 
     def get(self) -> Optional[Tuple]:
         data = MouseMoveData()
-        if self.rawinput_lib.get_mouse_move_input(ctypes.byref(data)):
+        if self.rawinput_lib.cdll.get_mouse_move_input(ctypes.byref(data)):
             return data.timestamp, data.dx, data.dy
 
 class MouseButtonInputReader:
-    def __init__(self, rawinput_lib):
+    def __init__(self, rawinput_lib: RawInputLib):
         self.rawinput_lib = rawinput_lib
 
     def get(self) -> Optional[Tuple]:
         data = MouseButtonData()
-        if self.rawinput_lib.get_mouse_button_input(ctypes.byref(data)):
+        if self.rawinput_lib.cdll.get_mouse_button_input(ctypes.byref(data)):
             return data.timestamp, data.button, data.down
 
 class MouseScrollInputReader:
-    def __init__(self, rawinput_lib):
+    def __init__(self, rawinput_lib: RawInputLib):
         self.rawinput_lib = rawinput_lib
 
     def get(self) -> Optional[Tuple]:
         data = MouseScrollData()
-        if self.rawinput_lib.get_mouse_scroll_input(ctypes.byref(data)):
+        if self.rawinput_lib.cdll.get_mouse_scroll_input(ctypes.byref(data)):
             return data.timestamp, data.scrollAmount
 
 class KeyboardInputReader:
-    def __init__(self, rawinput_lib):
+    def __init__(self, rawinput_lib: RawInputLib):
         self.rawinput_lib = rawinput_lib
 
     def get(self) -> Optional[Tuple]:
         data = KeyboardData()
-        if self.rawinput_lib.get_keyboard_input(ctypes.byref(data)):
+        if self.rawinput_lib.cdll.get_keyboard_input(ctypes.byref(data)):
             return data.timestamp, data.keyCode, data.down
 
 @dataclass
@@ -92,65 +131,31 @@ class PeekableReader:
             return self.peeked_data
         self.peeked_data = self.reader.get()
         return self.peeked_data
-        
 
 class RawInputReader:
-    def __init__(self, dll_path = "./rawinputlib.dll"):
-        self.dll_path = dll_path
-        self.rawinput_lib = None
-        self._load_dll()
-
-        self.rawinput_lib.initialize_raw_input.restype = ctypes.c_int
-        self.rawinput_lib.get_mouse_move_input.argtypes = [ctypes.POINTER(MouseMoveData)]
-        self.rawinput_lib.get_mouse_move_input.restype = ctypes.c_int
-        self.rawinput_lib.get_mouse_button_input.argtypes = [ctypes.POINTER(MouseButtonData)]
-        self.rawinput_lib.get_mouse_button_input.restype = ctypes.c_int
-        self.rawinput_lib.get_mouse_scroll_input.argtypes = [ctypes.POINTER(MouseScrollData)]
-        self.rawinput_lib.get_mouse_scroll_input.restype = ctypes.c_int
-        self.rawinput_lib.get_keyboard_input.argtypes = [ctypes.POINTER(KeyboardData)]
-        self.rawinput_lib.get_keyboard_input.restype = ctypes.c_int
-        self.rawinput_lib.cleanup_raw_input.restype = None
-
-        self.mouse_move = PeekableReader(MouseMoveInputReader(self.rawinput_lib))
-        self.mouse_button = PeekableReader(MouseButtonInputReader(self.rawinput_lib))
-        self.mouse_scroll = PeekableReader(MouseScrollInputReader(self.rawinput_lib))
-        self.keyboard = PeekableReader(KeyboardInputReader(self.rawinput_lib))
+    def __init__(self, rawinput_lib = RawInputLib()):
+        self.rawinput_lib = rawinput_lib
+        self.mouse_move = PeekableReader(MouseMoveInputReader(rawinput_lib))
+        self.mouse_button = PeekableReader(MouseButtonInputReader(rawinput_lib))
+        self.mouse_scroll = PeekableReader(MouseScrollInputReader(rawinput_lib))
+        self.keyboard = PeekableReader(KeyboardInputReader(rawinput_lib))
 
     @property
     def inputs(self):
         return [self.mouse_move, self.mouse_button, self.mouse_scroll, self.keyboard]
-
-    def _load_dll(self):
-        import os
-
-        try:
-            self.rawinput_lib = ctypes.CDLL(self.dll_path)
-        except OSError:
-            for root, dirs, files in os.walk('.'):
-                if 'rawinputlib.dll' in files:
-                    dll_path = os.path.join(root, 'rawinputlib.dll')
-                    try:
-                        self.rawinput_lib = ctypes.CDLL(dll_path)
-                        self.dll_path = dll_path
-                        break
-                    except OSError:
-                        continue
-
-        if self.rawinput_lib is None:
-            raise FileNotFoundError(f"Could not find or load rawinputlib dll.")
 
     def open(self) -> bool:
         """
         Get ready to read raw input, starts C process
         Returns bool indicating success
         """
-        return self.rawinput_lib.initialize_raw_input()
+        return self.rawinput_lib.cdll.initialize_raw_input()
 
     def close(self):
         """
         Close reading process and release handlers
         """
-        self.rawinput_lib.cleanup_raw_input()
+        self.rawinput_lib.cdll.cleanup_raw_input()
 
 from ..constants import POLLS_PER_FRAME, FPS
 
