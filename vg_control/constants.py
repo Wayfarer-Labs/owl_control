@@ -10,7 +10,7 @@ INACTIVITY_TIME = 20 # No input for this long = stop recording
 TIME_TO_STOP = 5 # How long do we think it will take OBS to stop recording?
 
 # API endpoints
-API_BASE_URL = "https://api.openworldlabs.com"
+API_BASE_URL = "https://api.openworldlabs.ai"
 UPLOAD_ENDPOINT = "/v1/upload"
 
 # File formats

@@ -147,7 +147,7 @@ async def wait_until_input():
     """
     Blocks until any input is detected then 
     """
-    delay = 1. / FPS / POLLS_PER_FRAME
+    delay = 0.05
     reader = RAW_INPUT
 
     try:
@@ -173,7 +173,7 @@ async def wait_until_input():
         return
     
 async def wait_until_idle(max_idle_time):
-    delay = 1. / FPS / POLLS_PER_FRAME
+    delay = 0.05
     idle_counter = 0
     reader = RAW_INPUT
     last_time = time.perf_counter()

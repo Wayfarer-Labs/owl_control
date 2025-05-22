@@ -159,10 +159,8 @@ class SimpleRecorder:
         await asyncio.sleep(TIME_TO_STOP)
         
         if duration < MIN_FOOTAGE:
-            # Mark directory as uploaded and invalid since recording was too short
+            # Mark directory as invalid since recording was too short
             try:
-                with open(os.path.join(self.recording_dir, '.uploaded'), 'w') as f:
-                    pass
                 with open(os.path.join(self.recording_dir, '.invalid'), 'w') as f:
                     pass
             except:
