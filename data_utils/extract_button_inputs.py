@@ -20,7 +20,7 @@ def get_keycode(ascii_char):
     return None
 
 
-def process_video(video_dir):
+def process_video(video_dir, return_tensor = False):
     """
     Process button input data from a video directory containing inputs.csv
     Extracts per-frame button states and saves as tensor chunks
@@ -134,6 +134,9 @@ def process_video(video_dir):
             button_tensor[frame_idx:,key_idx] = False
             button_tensor[frame_idx,key_idx] = True
 
+    if return_tensor:
+        return button_tensor
+    
     # Split into chunks and save
     for chunk_idx in range(0, total_frames, SPLIT_SIZE):
         end_idx = min(chunk_idx + SPLIT_SIZE, total_frames)
