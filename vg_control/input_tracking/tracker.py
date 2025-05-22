@@ -38,23 +38,23 @@ class InputTracker:
 
             while self.running:
                 any_event = False
-                mouse_move_success, mouse_move_data = self.raw_input_reader.get_mouse_move_input()
-                if mouse_move_success:
+                mouse_move_data = self.raw_input_reader.mouse_move.get()
+                if mouse_move_data is not None:
                     self.callbacks['mouse_move'](*mouse_move_data[1:])
                     any_event = True
                 
-                mouse_button_success, mouse_button_data = self.raw_input_reader.get_mouse_button_input()
-                if mouse_button_success:
+                mouse_button_data = self.raw_input_reader.mouse_button.get()
+                if mouse_button_data is not None:
                     self.callbacks['mouse_button'](*mouse_button_data[1:])
                     any_event = True
                 
-                mouse_scroll_success, mouse_scroll_data = self.raw_input_reader.get_mouse_scroll_input()
-                if mouse_scroll_success:
+                mouse_scroll_data = self.raw_input_reader.mouse_scroll.get()
+                if mouse_scroll_data is not None:
                     self.callbacks['mouse_scroll'](*mouse_scroll_data[1:])
                     any_event = True
                 
-                keyboard_success, keyboard_data = self.raw_input_reader.get_keyboard_input()
-                if keyboard_success:
+                keyboard_data = self.raw_input_reader.keyboard.get()
+                if keyboard_data is not None:
                     self.callbacks['keyboard'](*keyboard_data[1:])
                     any_event = True
 

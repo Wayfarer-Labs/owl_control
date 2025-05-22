@@ -1,4 +1,5 @@
-from typing import Tuple
+from dataclasses import dataclass
+from typing import Optional, Tuple, Union
 
 import ctypes
 from ctypes import Structure, c_ulonglong, c_long, c_uint, c_bool
@@ -34,6 +35,65 @@ def keycode_to_key(key: int):
     except ValueError:
         return None
 
+class MouseMoveInputReader:
+    def __init__(self, rawinput_lib):
+        self.rawinput_lib = rawinput_lib
+
+    def get(self) -> Optional[Tuple]:
+        data = MouseMoveData()
+        if self.rawinput_lib.get_mouse_move_input(ctypes.byref(data)):
+            return data.timestamp, data.dx, data.dy
+
+class MouseButtonInputReader:
+    def __init__(self, rawinput_lib):
+        self.rawinput_lib = rawinput_lib
+
+    def get(self) -> Optional[Tuple]:
+        data = MouseButtonData()
+        if self.rawinput_lib.get_mouse_button_input(ctypes.byref(data)):
+            return data.timestamp, data.button, data.down
+
+class MouseScrollInputReader:
+    def __init__(self, rawinput_lib):
+        self.rawinput_lib = rawinput_lib
+
+    def get(self) -> Optional[Tuple]:
+        data = MouseScrollData()
+        if self.rawinput_lib.get_mouse_scroll_input(ctypes.byref(data)):
+            return data.timestamp, data.scrollAmount
+
+class KeyboardInputReader:
+    def __init__(self, rawinput_lib):
+        self.rawinput_lib = rawinput_lib
+
+    def get(self) -> Optional[Tuple]:
+        data = KeyboardData()
+        if self.rawinput_lib.get_keyboard_input(ctypes.byref(data)):
+            return data.timestamp, data.keyCode, data.down
+
+@dataclass
+class Empty:
+    pass
+
+class PeekableReader:
+    def __init__(self, reader):
+        self.reader = reader
+        self.peeked_data: Union[Optional[Tuple], Empty] = Empty()
+
+    def get(self) -> Optional[Tuple]:
+        if isinstance(self.peeked_data, Empty):
+            return self.reader.get()
+        data = self.peeked_data
+        self.peeked_data = Empty()
+        return data
+
+    def peek(self) -> Optional[Tuple]:
+        if not isinstance(self.peeked_data, Empty):
+            return self.peeked_data
+        self.peeked_data = self.reader.get()
+        return self.peeked_data
+        
+
 class RawInputReader:
     def __init__(self, dll_path = "./rawinputlib.dll"):
         self.dll_path = dll_path
@@ -51,10 +111,14 @@ class RawInputReader:
         self.rawinput_lib.get_keyboard_input.restype = ctypes.c_int
         self.rawinput_lib.cleanup_raw_input.restype = None
 
-        self.mouse_move_data = MouseMoveData()
-        self.mouse_button_data = MouseButtonData()
-        self.mouse_scroll_data = MouseScrollData()
-        self.keyboard_data = KeyboardData()
+        self.mouse_move = PeekableReader(MouseMoveInputReader(self.rawinput_lib))
+        self.mouse_button = PeekableReader(MouseButtonInputReader(self.rawinput_lib))
+        self.mouse_scroll = PeekableReader(MouseScrollInputReader(self.rawinput_lib))
+        self.keyboard = PeekableReader(KeyboardInputReader(self.rawinput_lib))
+
+    @property
+    def inputs(self):
+        return [self.mouse_move, self.mouse_button, self.mouse_scroll, self.keyboard]
 
     def _load_dll(self):
         import os
@@ -82,60 +146,11 @@ class RawInputReader:
         """
         return self.rawinput_lib.initialize_raw_input()
 
-    
     def close(self):
         """
         Close reading process and release handlers
         """
         self.rawinput_lib.cleanup_raw_input()
-
-    def get_mouse_move_input(self) -> Tuple[bool, Tuple]:
-        """
-        Get mouse movements if any were polled
-        Returns True and results if something was detected,
-        Returns False, and an empty tuple otherwise
-        """
-        if self.rawinput_lib.get_mouse_move_input(ctypes.byref(self.mouse_move_data)):
-            return True, (self.mouse_move_data.timestamp, self.mouse_move_data.dx, self.mouse_move_data.dy)
-        else:
-            return False, ()
-
-    def get_mouse_button_input(self) -> Tuple[bool, Tuple]:
-        """
-        Get mouse button events if any were polled
-        Returns True and results if something was detected,
-        Returns False, and an empty tuple otherwise
-        """
-        if self.rawinput_lib.get_mouse_button_input(ctypes.byref(self.mouse_button_data)):
-            return True, (self.mouse_button_data.timestamp, self.mouse_button_data.button, self.mouse_button_data.down)
-        else:
-            return False, ()
-
-    def get_mouse_scroll_input(self) -> Tuple[bool, Tuple]:
-        """
-        Get mouse scroll events if any were polled
-        Returns True and results if something was detected,
-        Returns False, and an empty tuple otherwise
-        """
-        if self.rawinput_lib.get_mouse_scroll_input(ctypes.byref(self.mouse_scroll_data)):
-            return True, (self.mouse_scroll_data.timestamp, self.mouse_scroll_data.scrollAmount)
-        else:
-            return False, ()
-
-    def get_keyboard_input(self) -> Tuple[bool, Tuple]:
-        """
-        Get keyboard events if any were polled
-        Returns True and results if something was detected,
-        Returns False, and an empty tuple otherwise
-        """
-        if self.rawinput_lib.get_keyboard_input(ctypes.byref(self.keyboard_data)):
-            return True, (
-                self.keyboard_data.timestamp,
-                self.keyboard_data.keyCode,
-                self.keyboard_data.down
-            )
-        else:
-            return False, ()
 
 from ..constants import POLLS_PER_FRAME, FPS
 
@@ -152,26 +167,14 @@ async def wait_until_input():
 
     try:
         while True:
-            mouse_move_success, _ = reader.get_mouse_move_input()
-            if mouse_move_success:
-                return
-
-            mouse_button_success, _ = reader.get_mouse_button_input() 
-            if mouse_button_success:
-                return
-
-            mouse_scroll_success, _ = reader.get_mouse_scroll_input()
-            if mouse_scroll_success:
-                return
-
-            keyboard_success, _ = reader.get_keyboard_input()
-            if keyboard_success:
-                return
+            for input in reader.inputs:
+                if input.peek() != None:
+                    return
 
             await asyncio.sleep(delay)
     except:
         return
-    
+
 async def wait_until_idle(max_idle_time):
     delay = 0.05
     idle_counter = 0
@@ -180,21 +183,10 @@ async def wait_until_idle(max_idle_time):
 
     try:
         while True:
-            mouse_move_success, _ = reader.get_mouse_move_input()
-            if mouse_move_success:
-                idle_counter = 0
-
-            mouse_button_success, _ = reader.get_mouse_button_input() 
-            if mouse_button_success:
-                idle_counter = 0
-
-            mouse_scroll_success, _ = reader.get_mouse_scroll_input()
-            if mouse_scroll_success:
-                idle_counter = 0
-
-            keyboard_success, _ = reader.get_keyboard_input()
-            if keyboard_success:
-                idle_counter = 0
+            for input in reader.inputs:
+                if input.peek() != None:
+                    idle_counter = 0
+                    break
 
             await asyncio.sleep(delay)
             time_delta = time.perf_counter() - last_time
@@ -219,13 +211,12 @@ class HotkeyManager:
     async def event_loop(self):
         while True:
             await asyncio.sleep(self.delay)
-            kb_success, kb_info = self.reader.get_keyboard_input()
-            if not kb_success: # Nothing pressed
+            kb_info = self.reader.keyboard.peek()
+            if kb_info is None: # Nothing pressed
                 continue
-            keydown = kb_info[2]
+            keycode, keydown = kb_info[1], kb_info[2]
             if not keydown: # Not a down event
                 continue
-            keycode = kb_info[1]
             if keycode in self.callbacks:
                 # Create a new task instead of awaiting directly
                 await self.call(keycode)
