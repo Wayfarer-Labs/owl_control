@@ -4,6 +4,9 @@ from datetime import datetime
 import requests
 import urllib3
 import httpx
+import subprocess
+import shlex
+from tqdm import tqdm
 
 from ..constants import API_BASE_URL
 from ..metadata import get_hwid
@@ -51,9 +54,6 @@ def _upload_archive(
         base_url=base_url,
     )
 
-    print("====")
-    print(upload_url)
-    print("====")
     with open(archive_path, "rb") as f:
         put_resp = requests.put(upload_url, data=f, timeout=60, verify=False)
         put_resp.raise_for_status()
@@ -88,7 +88,6 @@ def get_upload_url(
         data = response.json()
         return data.get("url") or data.get("upload_url") or data["uploadUrl"]
 
-
 def upload_archive(
     api_key: str,
     archive_path: str,
@@ -104,32 +103,42 @@ def upload_archive(
         base_url=base_url,
     )
 
+    # Get file size for progress bar
     file_size = os.path.getsize(archive_path)
     
-    headers = {
-        'Content-Type': 'application/x-tar',
-        'Content-Length': str(file_size),
-        'Transfer-Encoding': 'chunked'
-    }
-
-    # Use a chunk size of 5MB
-    CHUNK_SIZE = 5 * 1024 * 1024  
-
-    def file_stream():
-        with open(archive_path, 'rb') as f:
-            while True:
-                chunk = f.read(CHUNK_SIZE)
-                if not chunk:
-                    break
-                yield chunk
-
-    with httpx.Client(
-        verify=False,
-        timeout=httpx.Timeout(timeout=300.0, read=300.0, write=300.0, connect=60.0)
-    ) as client:
-        put_resp = client.put(
-            upload_url,
-            content=file_stream(),
-            headers=headers
+    # Use -# for a simpler progress indicator that's easier to parse
+    curl_command = f'curl -X PUT "{upload_url}" -H "Content-Type: application/x-tar" -T "{archive_path}" -# -m 1200'
+    
+    with tqdm(total=file_size, unit='B', unit_scale=True, desc="Uploading") as pbar:
+        process = subprocess.Popen(
+            shlex.split(curl_command),
+            stderr=subprocess.PIPE,
+            bufsize=1,  # Line buffered
+            universal_newlines=True
         )
-        put_resp.raise_for_status()
+        
+        last_update = 0
+        # Read curl's progress output
+        while True:
+            line = process.stderr.readline()
+            if not line:
+                break
+            
+            # Update progress bar based on curl's output
+            if "#" in line:
+                try:
+                    # Extract percentage from the number of # characters
+                    percent = (line.count("#") / 50) * 100  # curl uses 50 # chars for 100%
+                    current = int(file_size * (percent / 100))
+                    # Only update if we've made progress to avoid unnecessary refreshes
+                    if current > last_update:
+                        pbar.n = current
+                        pbar.refresh()
+                        last_update = current
+                except:
+                    continue
+
+        # Wait for process to complete
+        return_code = process.wait()
+        if return_code != 0:
+            raise Exception(f"Upload failed with return code {return_code}")
