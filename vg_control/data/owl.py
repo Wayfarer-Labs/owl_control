@@ -147,6 +147,8 @@ class OWLDataManager:
 
                 self.staged_files.append(root)
                 file_counter += 1
+        return file_counter > 0
+    
 
     def compress(self):
         import uuid
@@ -193,9 +195,10 @@ class OWLDataManager:
 
 def upload_all_files(token, delete_uploaded=False):
     manager = OWLDataManager(token)
-    manager.stage()
-    manager.compress()
-    manager.upload()
+    has_files = manager.stage()
+    if has_files:
+        manager.compress()
+        manager.upload()
 
     if delete_uploaded:
         manager.delete_uploaded()
