@@ -159,7 +159,7 @@ class HotkeyManager:
         self.tasks = set()
 
     async def on_keypress(self, keyboard_data: KeyboardData):
-        if keyboard_data.keyDown and keyboard_data.keyCode in self.callbacks:
+        if keyboard_data.down and keyboard_data.keyCode in self.callbacks:
             await self.call(keyboard_data.keyCode)
 
     async def call(self, keycode):
