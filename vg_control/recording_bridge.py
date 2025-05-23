@@ -28,9 +28,9 @@ class RecorderBridge:
             print(json.dumps({"status": "error", "error": str(e)}))
             sys.stdout.flush()
     
-    async def recv_input(self, input: InputData):
+    def recv_input(self, input: InputData):
         if isinstance(input, KeyboardData):
-            await self.hotkeys.on_keypress(input)
+            asyncio.create_task(self.hotkeys.on_keypress(input))
         self.recorder.saw_user_input()
         self.recorder.client.writer.tracker.recv_input(input)
         
