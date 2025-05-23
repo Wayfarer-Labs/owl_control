@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# VG Control Setup Script
+# OWL Control Setup Script
 # This script sets up both the Python and Electron/Next.js components
 
 set -e  # Exit on error
 
-echo "VG Control Setup Script"
+echo "OWL Control Setup Script"
 echo "======================"
 
 # Detect OS
@@ -130,7 +130,7 @@ echo "Setting up environment configuration..."
 if [ ! -f ".env" ]; then
     echo "Creating .env file..."
     cat > .env << EOF
-# Environment configuration for VG Control
+# Environment configuration for OWL Control
 NODE_ENV=development
 PYTHON_TOOL=$PYTHON_TOOL
 

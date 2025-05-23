@@ -1,0 +1,86 @@
+appId: com.openworldlabs.vgcontrol
+productName: OWL Control
+directories:
+  output: dist
+  buildResources: build-resources
+
+files:
+  - dist/**/*
+  - node_modules/**/*
+  - package.json
+  - "!**/*.ts"
+  - "!**/*.tsx"
+  - "!src/**/*"
+  - "!**/*.map"
+  - "!**/*.md"
+  - "!.github/**/*"
+  - "!scripts/**/*"
+  - "!data/**/*"
+  - "!logs/**/*"
+
+extraResources:
+  - from: vg_control
+    to: vg_control
+    filter:
+      - "**/*.py"
+      - "**/*.pyd"
+      - "!**/__pycache__"
+      - "!**/*.pyc"
+  - from: rawinputlib.dll
+    to: rawinputlib.dll
+  - from: python-dist
+    to: python-dist
+    filter:
+      - "**/*"
+
+mac:
+  category: public.app-category.utilities
+  target:
+    - dmg
+    - zip
+  icon: src/assets/icon.icns
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build-resources/entitlements.mac.plist
+  entitlementsInherit: build-resources/entitlements.mac.plist
+
+win:
+  target:
+    - nsis
+  icon: src/assets/icon.ico
+  publisherName: "Open World Labs"
+  certificateSubjectName: "Open World Labs"
+  rfc3161TimeStampServer: "http://timestamp.digicert.com"
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  allowElevation: true
+  installerIcon: src/assets/icon.ico
+  uninstallerIcon: src/assets/icon.ico
+  installerHeader: build-resources/installerHeader.bmp
+  installerSidebar: build-resources/installerSidebar.bmp
+  license: LICENSE
+  warningsAsErrors: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: OWL Control
+  include: build-resources/installer.nsh
+
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Utility
+  icon: src/assets
+  desktop:
+    Name: OWL Control
+    Comment: Video game control input tracking application
+    Categories: Utility
+
+publish:
+  - provider: github
+    owner: openworldlabs
+    repo: vg-control
+    releaseType: release

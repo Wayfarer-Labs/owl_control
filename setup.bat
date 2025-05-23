@@ -1,9 +1,9 @@
 @echo off
 
-REM VG Control Setup Script for Windows
+REM OWL Control Setup Script for Windows
 REM This script sets up both the Python and Electron/Next.js components
 
-echo VG Control Setup Script
+echo OWL Control Setup Script
 echo ======================
 
 REM Check for required tools
@@ -110,7 +110,7 @@ echo Setting up environment configuration...
 if not exist ".env" (
     echo Creating .env file...
     (
-        echo # Environment configuration for VG Control
+        echo # Environment configuration for OWL Control
         echo NODE_ENV=development
         echo PYTHON_TOOL=%PYTHON_TOOL%
         echo.

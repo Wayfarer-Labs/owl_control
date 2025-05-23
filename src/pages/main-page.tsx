@@ -59,7 +59,7 @@ export function MainPage() {
         <div className="container flex h-16 items-center justify-between px-4">
           <div className="flex items-center space-x-2">
             <Logo width={32} height={32} />
-            <span className="text-lg font-bold">VG Control</span>
+            <span className="text-lg font-bold">OWL Control</span>
           </div>
           
           <div className="flex items-center space-x-4">
