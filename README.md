@@ -149,13 +149,22 @@ cd owl_control
 
 # Install dependencies
 npm install
+pip install -r requirements.txt
+
+# Build the application
+npm run build
 
 # Run in development mode
 npm run dev
 
-# Build for production
-npm run build
+# Package for distribution (includes Python bundling)
+npm run package        # All platforms
+npm run package:win    # Windows only
+npm run package:mac    # macOS only
+npm run package:linux  # Linux only
 ```
+
+Currently only Windows is supported, although we'll be adding more platforms in the near future.
 
 <div align="center">
   <em>📖 For detailed development instructions, see our <a href="docs/development.md">Development Guide</a></em>

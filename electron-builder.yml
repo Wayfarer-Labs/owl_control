@@ -70,6 +70,6 @@ linux:
 
 publish:
   - provider: github
-    owner: openworldlabs
-    repo: vg-control
+    owner: OpenWorld-Labs
+    repo: vg_control
     releaseType: release

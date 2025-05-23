@@ -24,7 +24,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/openworldlabs/vg-control.git"
+    "url": "git+https://github.com/OpenWorld-Labs/vg_control.git"
   },
   "author": "Open World Labs",
   "license": "MIT",
