@@ -33,8 +33,8 @@ a = Analysis(
     ['${path.join(__dirname, '..', 'vg_control', '__init__.py').replace(/\\/g, '/')}'],
     pathex=[str(vg_control_path.parent)],
     binaries=[
-        ('${path.join(__dirname, '..', 'rawinputlib.dll').replace(/\\/g, '/')}', '.') if sys.platform == 'win32' else (None, None)
-    ],
+        ('${path.join(__dirname, '..', 'rawinputlib.dll').replace(/\\/g, '/')}', '.')
+    ] if sys.platform == 'win32' else [],
     datas=[
         (str(vg_control_path), 'vg_control')
     ],

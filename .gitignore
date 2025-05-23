@@ -60,3 +60,6 @@ dmypy.sock
 .DS_Store
 *.swp
 *.~
+
+*.spec
+python-dist/*
