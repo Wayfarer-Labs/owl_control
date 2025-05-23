@@ -1,7 +1,7 @@
 import time
 import asyncio
 
-from .rawinputlib import RAW_INPUT
+from .rawinputlib import InputData, KeyboardData, MouseButtonData, MouseMoveData, MouseScrollData
 from .spam_block import SpamBlock
 from ..constants import FPS, POLLS_PER_FRAME
 
@@ -10,7 +10,6 @@ from ..constants import FPS, POLLS_PER_FRAME
 # note that we cut out timestamp as its preferable to just get timestamp in python
 class InputTracker:
     def __init__(self):
-        self.raw_input_reader = RAW_INPUT
         self.running = False
         self.callbacks = {}
         self.polling_delay = 1. / (FPS * POLLS_PER_FRAME)
@@ -27,46 +26,32 @@ class InputTracker:
         """Returns the time in seconds since the last input event was received."""
         return time.perf_counter() - self.last_event_time
 
+    def recv_input(self, input_data: InputData):
+        if not self.running:
+            return
+
+        self.last_event_time = time.perf_counter()
+
+        if isinstance(input_data, MouseMoveData):
+            self.callbacks['mouse_move'](input_data.dx, input_data.dy)
+        elif isinstance(input_data, MouseButtonData):
+            self.callbacks['mouse_button'](input_data.button, input_data.down)
+        elif isinstance(input_data, MouseScrollData):
+            self.callbacks['mouse_scroll'](input_data.scroll_amount)
+        elif isinstance(input_data, KeyboardData):
+            self.callbacks['keyboard'](input_data.key_code, input_data.down)
 
     async def __call__(self):
         self.running = True
-        try:
-            self.kb_spam_blocker = SpamBlock()
-            self.mb_spam_blocker = SpamBlock()
-            self.callbacks['keyboard'] = self.kb_spam_blocker.decorate(self.callbacks['keyboard'])
-            self.callbacks['mouse_button'] = self.mb_spam_blocker.decorate(self.callbacks['mouse_button'])
-
-            while self.running:
-                any_event = False
-                mouse_move_data = self.raw_input_reader.mouse_move.get()
-                if mouse_move_data is not None:
-                    self.callbacks['mouse_move'](*mouse_move_data[1:])
-                    any_event = True
-                
-                mouse_button_data = self.raw_input_reader.mouse_button.get()
-                if mouse_button_data is not None:
-                    self.callbacks['mouse_button'](*mouse_button_data[1:])
-                    any_event = True
-                
-                mouse_scroll_data = self.raw_input_reader.mouse_scroll.get()
-                if mouse_scroll_data is not None:
-                    self.callbacks['mouse_scroll'](*mouse_scroll_data[1:])
-                    any_event = True
-                
-                keyboard_data = self.raw_input_reader.keyboard.get()
-                if keyboard_data is not None:
-                    self.callbacks['keyboard'](*keyboard_data[1:])
-                    any_event = True
-
-                if any_event:
-                    self.last_event_time = time.perf_counter()
-
-                await asyncio.sleep(self.polling_delay)  # Small sleep to reduce CPU usage
-        finally:
-            self.kb_spam_blocker = None
-            self.mb_spam_blocker = None
+        self.kb_spam_blocker = SpamBlock()
+        self.mb_spam_blocker = SpamBlock()
+        self.callbacks['keyboard'] = self.kb_spam_blocker.decorate(self.callbacks['keyboard'])
+        self.callbacks['mouse_button'] = self.mb_spam_blocker.decorate(self.callbacks['mouse_button'])
+            
 
     async def stop(self):
+        self.kb_spam_blocker = None
+        self.mb_spam_blocker = None
         self.running = False
 
 if __name__ == "__main__":
