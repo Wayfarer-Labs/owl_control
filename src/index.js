@@ -14,7 +14,7 @@ import './settings-styles.css';
 import './assets/tray-icon.svg';
 
 // Log app start for debugging
-console.log('VG Control app initializing...');
+console.log('OWL Control app initializing...');
 
 const App = () => {
   const [authenticated, setAuthenticated] = useState(false);
@@ -98,7 +98,7 @@ const App = () => {
   
   // Create an early detection/debug function
   useEffect(() => {
-    console.log('VG Control init with URL:', window.location.href);
+    console.log('OWL Control init with URL:', window.location.href);
     console.log('Direct settings detected:', isSettingsDirectNavigation);
     console.log('Auth state:', authenticated);
     

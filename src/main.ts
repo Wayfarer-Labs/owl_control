@@ -136,7 +136,7 @@ function createSettingsWindow() {
     maximizable: false,  // Prevent maximize
     frame: true,  // Keep the frame for window controls
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',  // macOS style
-    title: 'VG Control Settings'  // Window title
+    title: 'OWL Control Settings'  // Window title
   });
   
   // Directly load settings page with query parameters - single load
@@ -426,7 +426,7 @@ function updateTrayMenu() {
   
   const contextMenu = Menu.buildFromTemplate(menuTemplate);
   tray.setContextMenu(contextMenu);
-  tray.setToolTip(isRecording ? 'VG Control - Recording' : 'VG Control');
+  tray.setToolTip(isRecording ? 'OWL Control - Recording' : 'OWL Control');
 }
 
 // Start Python bridges after authentication

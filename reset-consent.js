@@ -1,4 +1,4 @@
-// Script to reset the VG Control app's consent status
+// Script to reset the OWL Control app's consent status
 // This will make the consent screen appear again when you restart the app
 
 const fs = require('fs');
@@ -49,5 +49,5 @@ if (fs.existsSync(configPath)) {
 }
 
 // Reminder for the user
-console.log('\nRemember to restart the VG Control app for changes to take effect.');
+console.log('\nRemember to restart the OWL Control app for changes to take effect.');
 console.log('When you restart, you should see the consent screen again.');

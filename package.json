@@ -8,8 +8,16 @@
     "dev": "cross-env NODE_ENV=development concurrently \"npm run watch\" \"electron .\"",
     "build": "webpack --config webpack.config.js",
     "watch": "webpack --config webpack.config.js --watch",
+    "bundle-python": "node scripts/bundle-python.js",
+    "prepackage": "npm run bundle-python",
     "package": "electron-builder",
+    "package:win": "npm run prepackage && electron-builder --win",
+    "package:mac": "npm run prepackage && electron-builder --mac",
+    "package:linux": "npm run prepackage && electron-builder --linux",
     "postinstall": "electron-builder install-app-deps",
+    "test:packaging": "node scripts/test-packaging.js",
+    "test:python": "./test-packaging.sh",
+    "test:python:win": "test-packaging.bat",
     "version:patch": "node scripts/bump-version.js patch",
     "version:minor": "node scripts/bump-version.js minor",
     "version:major": "node scripts/bump-version.js major"
@@ -54,42 +62,5 @@
     "typescript": "^5.2.2",
     "webpack": "^5.88.2",
     "webpack-cli": "^5.1.4"
-  },
-  "build": {
-    "appId": "com.openworldlabs.vgcontrol",
-    "productName": "VG Control",
-    "mac": {
-      "category": "public.app-category.utilities",
-      "target": [
-        "dmg",
-        "zip"
-      ]
-    },
-    "win": {
-      "target": [
-        "nsis",
-        "portable"
-      ]
-    },
-    "linux": {
-      "target": [
-        "AppImage",
-        "deb"
-      ],
-      "category": "Utility"
-    },
-    "extraResources": [
-      {
-        "from": "vg_control",
-        "to": "vg_control",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "rawinputlib.dll",
-        "to": "rawinputlib.dll"
-      }
-    ]
   }
 }
