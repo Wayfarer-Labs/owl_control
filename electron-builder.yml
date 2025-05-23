@@ -38,16 +38,12 @@ mac:
   target:
     - dmg
     - zip
-  icon: src/assets/icon.icns
   hardenedRuntime: true
   gatekeeperAssess: false
-  entitlements: build-resources/entitlements.mac.plist
-  entitlementsInherit: build-resources/entitlements.mac.plist
 
 win:
   target:
     - nsis
-  icon: src/assets/icon.ico
   publisherName: "Open World Labs"
 
 nsis:
@@ -55,16 +51,11 @@ nsis:
   perMachine: false
   allowToChangeInstallationDirectory: true
   allowElevation: true
-  installerIcon: src/assets/icon.ico
-  uninstallerIcon: src/assets/icon.ico
-  installerHeader: build-resources/installerHeader.bmp
-  installerSidebar: build-resources/installerSidebar.bmp
   license: LICENSE
   warningsAsErrors: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: OWL Control
-  include: build-resources/installer.nsh
 
 linux:
   target:
