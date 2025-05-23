@@ -13,6 +13,8 @@ from ..constants import ROOT_DIR, MIN_FOOTAGE, MAX_FOOTAGE
 from .input_utils.buttons import get_button_stats
 from .input_utils.mouse import get_mouse_stats
 from .uploader import upload_archive
+from .secure_uploader import upload_archive_with_sessions, is_secure_upload_available
+from ..security import session_manager
 
 # Directory structure might be nested, but the root dirs will always have a .mp4 and .csv
 
@@ -99,6 +101,8 @@ class OWLDataManager:
         self.staging_dir = "staging"
         self.current_tar_uuid = None
         self.token = token
+        self.use_secure_upload = is_secure_upload_available()
+        self.session_dirs = []  # Track directories with sessions
         os.makedirs(self.staging_dir, exist_ok=True)
 
     def stage(self, verbose = False):
@@ -113,6 +117,7 @@ class OWLDataManager:
             has_mp4 = any([fname.endswith('.mp4') for fname in files])
             has_csv = any([fname.endswith('.csv') for fname in files])
             has_metadata = any([fname == 'metadata.json' for fname in files])
+            has_session = '.session' in files
                 
             if has_mp4 and has_csv and has_metadata:
                 mp4_file = next(f for f in files if f.endswith('.mp4'))
@@ -141,9 +146,21 @@ class OWLDataManager:
                         pass
                     continue
 
+                # Check if using secure upload and session exists
+                if self.use_secure_upload and not has_session:
+                    print(f"Warning: No session file found in {root}, skipping for secure upload")
+                    continue
+                
                 shutil.copy2(mp4_src_path, os.path.join(self.staging_dir, new_mp4))
                 shutil.copy2(csv_src_path, os.path.join(self.staging_dir, new_csv))
                 shutil.copy2(meta_src_path, os.path.join(self.staging_dir, new_metadata))
+                
+                # Copy session file if exists
+                if has_session:
+                    new_session = f"{file_counter:06d}.session"
+                    session_src_path = os.path.join(root, '.session')
+                    shutil.copy2(session_src_path, os.path.join(self.staging_dir, new_session))
+                    self.session_dirs.append(root)
 
                 self.staged_files.append(root)
                 file_counter += 1
@@ -168,7 +185,13 @@ class OWLDataManager:
         tar_name = f"{self.current_tar_uuid}.tar"
         
         try:
-            upload_archive(self.token, tar_name)
+            if self.use_secure_upload and self.session_dirs:
+                # Use secure upload with session validation
+                upload_archive_with_sessions(self.token, tar_name, self.session_dirs)
+            else:
+                # Fall back to regular upload
+                upload_archive(self.token, tar_name)
+                
             for staged_path in self.staged_files:
                 with open(os.path.join(staged_path, '.uploaded'), 'w') as f:
                     f.write('')
@@ -180,6 +203,7 @@ class OWLDataManager:
             if os.path.exists(self.staging_dir):
                 shutil.rmtree(self.staging_dir)
             self.staged_files = []
+            self.session_dirs = []
             self.current_tar_uuid = None
 
     def clear_upload_status(self):

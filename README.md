@@ -34,6 +34,19 @@ Your privacy is our top priority:
 - ✅ You can delete recordings anytime
 - ✅ Completely voluntary - stop recording whenever you want
 
+### Content Policy
+
+⚠️ **Important**: By using OWL Control, you agree not to upload any content that is:
+- Illegal in your jurisdiction or country of origin
+- Malicious, harmful, or inappropriate
+- Violates any applicable laws or regulations
+
+If you upload content that violates these terms, we will take necessary and proportional actions, which may include:
+- Removal of content
+- Suspension of access
+- Reporting to appropriate authorities
+- Other legal remedies as required
+
 ## 🎯 Supported Games
 
 OWL Control automatically detects and records from a curated list of single-player games. The app will notify you when it detects a supported game.

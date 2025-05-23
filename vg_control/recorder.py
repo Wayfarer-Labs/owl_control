@@ -21,6 +21,7 @@ from .constants import (
 from .input_tracking.rawinputlib import (
     HotkeyManager
 )
+from .security import session_manager
 
 class SimpleRecorder:
     def __init__(self):
@@ -31,6 +32,7 @@ class SimpleRecorder:
         self.is_recording = False
         self.recording_dir = None
         self.metadata = Metadata(str(uuid.uuid4()))
+        self.session = None
 
         self.idle_task = None
         self.game_running_task = None
@@ -118,6 +120,12 @@ class SimpleRecorder:
         self.recording_dir = os.path.join(game_dir, timestamp)
         os.makedirs(self.recording_dir, exist_ok=True)
 
+        # Create recording session
+        self.session = session_manager.create_session(
+            self.game_name.split('.')[0], 
+            self.recording_dir
+        )
+
         # Initialize clients
         obs_path = os.path.abspath(self.recording_dir).replace('\\', '/')
         self.obs_client = OBSClient(
@@ -177,11 +185,28 @@ class SimpleRecorder:
                     pass
             except:
                 print("Failed to mark directory as uploaded/invalid")
+        else:
+            # Complete the session with file paths
+            video_path = None
+            csv_path = os.path.join(self.recording_dir, "inputs.csv")
+            
+            # Find the video file
+            for file in os.listdir(self.recording_dir):
+                if file.endswith('.mp4'):
+                    video_path = os.path.join(self.recording_dir, file)
+                    break
+                    
+            if video_path and os.path.exists(video_path) and os.path.exists(csv_path):
+                try:
+                    session_manager.complete_active_session(video_path, csv_path)
+                except Exception as e:
+                    print(f"Failed to complete session: {e}")
 
         self.obs_client = None
         self.game_pid = None
         self.game_name = None
         self.recording_dir = None
+        self.session = None
         self.is_recording = False
 
 async def main():
