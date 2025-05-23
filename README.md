@@ -14,11 +14,10 @@ OWL Control automatically records your gameplay sessions (video + keyboard/mouse
 - **Privacy First** - Only records whitelisted single-player games, no microphone audio
 - **Full Control** - Start/stop recording anytime with hotkeys (F4/F5)
 - **Lightweight** - Runs quietly in your system tray
-- **Cross-Platform** - Works on Windows, macOS, and Linux
 
 ## 🚀 Getting Started
 
-1. **Download** the latest version from the [Releases](https://github.com/OpenWorld-Labs/vg_control/releases) page
+1. **Download** the latest version from the [Releases](https://github.com/OpenWorld-Labs/owl_control/releases) page
 2. **Install** the application for your operating system
 3. **Create an account** or enter your API key
 4. **Review and accept** the data collection terms
@@ -68,8 +67,8 @@ OWL Control is open source! If you're interested in the technical details or wan
 
 ```bash
 # Clone the repository
-git clone https://github.com/OpenWorld-Labs/vg_control.git
-cd vg_control
+git clone https://github.com/OpenWorld-Labs/owl_control.git
+cd owl_control
 
 # Install dependencies
 npm install
@@ -89,8 +88,8 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## 🙋 Support
 
-- **Issues or Bugs?** Please report them on our [GitHub Issues](https://github.com/OpenWorld-Labs/vg_control/issues) page
-- **Questions?** Check our [FAQ](docs/FAQ.md) or open a discussion
+- **Issues or Bugs?** Please report them on our [GitHub Issues](https://github.com/OpenWorld-Labs/owl_control/issues) page
+- **Questions?** Please visit our [GitHub Issues](https://github.com/OpenWorld-Labs/owl_control/issues) page
 
 ---
 
