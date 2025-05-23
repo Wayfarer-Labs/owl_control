@@ -1,3 +1,4 @@
+from collections import deque
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
@@ -145,7 +146,7 @@ class RawInputReader:
             for input in self.inputs:
                 data = input.get()
                 if data is not None:
-                    await broadcast(data)
+                    broadcast(data)
                     break
             await asyncio.sleep(polling_frequency)
 
@@ -154,13 +155,19 @@ from ..constants import POLLS_PER_FRAME, FPS
 class HotkeyManager:
     def __init__(self):
         self.callbacks = {}
-        self.delay = 1. / FPS / POLLS_PER_FRAME
 
-        self.tasks = set()
+        self.pending_keyboard_data = deque(maxlen=5)
 
-    async def on_keypress(self, keyboard_data: KeyboardData):
-        if keyboard_data.down and keyboard_data.keyCode in self.callbacks:
-            await self.call(keyboard_data.keyCode)
+    async def run(self):
+        while True:
+            if self.pending_keyboard_data:
+                keyboard_data = self.pending_keyboard_data.popleft()
+                if keyboard_data.down and keyboard_data.keyCode in self.callbacks:
+                    await self.call(keyboard_data.keyCode)
+            await asyncio.sleep(0.01)
+
+    def on_keypress(self, keyboard_data: KeyboardData):
+        self.pending_keyboard_data.append(keyboard_data)
 
     async def call(self, keycode):
         await self.callbacks[keycode]()

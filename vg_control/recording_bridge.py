@@ -23,14 +23,17 @@ class RecorderBridge:
             print(json.dumps({"status": "ready"}))
             sys.stdout.flush()
             
-            await self.raw_input.run(1. / FPS / POLLS_PER_FRAME, self.recv_input)
+            await asyncio.gather(
+                self.raw_input.run(1. / FPS / POLLS_PER_FRAME, self.recv_input),
+                self.hotkeys.run(),
+            )
         except Exception as e:
             print(json.dumps({"status": "error", "error": str(e)}))
             sys.stdout.flush()
     
-    async def recv_input(self, input: InputData):
+    def recv_input(self, input: InputData):
         if isinstance(input, KeyboardData):
-            await self.hotkeys.on_keypress(input)
+            self.hotkeys.on_keypress(input)
         self.recorder.saw_user_input()
         self.recorder.client.writer.tracker.recv_input(input)
         
