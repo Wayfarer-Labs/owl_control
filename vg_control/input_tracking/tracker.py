@@ -37,7 +37,7 @@ class InputTracker:
         elif isinstance(input_data, MouseButtonData):
             self.callbacks['mouse_button'](input_data.button, input_data.down)
         elif isinstance(input_data, MouseScrollData):
-            self.callbacks['mouse_scroll'](input_data.scroll_amount)
+            self.callbacks['mouse_scroll'](input_data.scrollAmount)
         elif isinstance(input_data, KeyboardData):
             self.callbacks['keyboard'](input_data.keyCode, input_data.down)
 
