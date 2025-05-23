@@ -49,8 +49,6 @@ win:
     - nsis
   icon: src/assets/icon.ico
   publisherName: "Open World Labs"
-  certificateSubjectName: "Open World Labs"
-  rfc3161TimeStampServer: "http://timestamp.digicert.com"
 
 nsis:
   oneClick: false
