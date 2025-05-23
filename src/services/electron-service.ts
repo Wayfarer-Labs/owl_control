@@ -32,21 +32,21 @@ export class ElectronService {
   }
   
   /**
-   * Start recording
+   * Start recording bridge
    */
-  public static async startRecording(recordingPath: string, outputPath: string): Promise<boolean> {
+  public static async startRecordingBridge(startKey: string, stopKey: string): Promise<boolean> {
     const ipcRenderer = this.getIpcRenderer();
     if (!ipcRenderer) return false;
-    return ipcRenderer.invoke('start-recording', recordingPath, outputPath);
+    return ipcRenderer.invoke('start-recording-bridge', startKey, stopKey);
   }
   
   /**
-   * Stop recording
+   * Start upload bridge
    */
-  public static async stopRecording(): Promise<boolean> {
+  public static async startUploadBridge(apiToken: string, deleteUploadedFiles: boolean): Promise<boolean> {
     const ipcRenderer = this.getIpcRenderer();
     if (!ipcRenderer) return false;
-    return ipcRenderer.invoke('stop-recording');
+    return ipcRenderer.invoke('start-upload-bridge', apiToken, deleteUploadedFiles);
   }
   
   /**

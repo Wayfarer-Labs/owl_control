@@ -14,15 +14,12 @@ interface SettingsPageProps {
 }
 
 export function SettingsPage({ onClose }: SettingsPageProps) {
-  const [recordingPath, setRecordingPath] = useState('');
-  const [outputPath, setOutputPath] = useState('');
-  const [uploadFrequency, setUploadFrequency] = useState<AppPreferences['uploadFrequency']>('one');
-  const [showRecordButton, setShowRecordButton] = useState(true);
   const [statusMessage, setStatusMessage] = useState('');
   const [userInfo, setUserInfo] = useState<any>(null);
-  const [startRecordingKey, setStartRecordingKey] = useState('');
-  const [stopRecordingKey, setStopRecordingKey] = useState('');
-  const [recordingKeys, setRecordingKeys] = useState<string[]>([]);
+  const [startRecordingKey, setStartRecordingKey] = useState('f4');
+  const [stopRecordingKey, setStopRecordingKey] = useState('f5');
+  const [apiToken, setApiToken] = useState('');
+  const [deleteUploadedFiles, setDeleteUploadedFiles] = useState(false);
   
   // Define the button styles directly in the component for reliability
   const buttonStyle = {
@@ -71,12 +68,10 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
     
     // Load preferences
     const prefs = pythonBridge.loadPreferences();
-    if (prefs.recordingPath) setRecordingPath(prefs.recordingPath);
-    if (prefs.outputPath) setOutputPath(prefs.outputPath);
-    if (prefs.uploadFrequency) setUploadFrequency(prefs.uploadFrequency);
-    if (prefs.showRecordButton !== undefined) setShowRecordButton(prefs.showRecordButton);
     if (prefs.startRecordingKey) setStartRecordingKey(prefs.startRecordingKey);
     if (prefs.stopRecordingKey) setStopRecordingKey(prefs.stopRecordingKey);
+    if (prefs.apiToken) setApiToken(prefs.apiToken);
+    if (prefs.deleteUploadedFiles !== undefined) setDeleteUploadedFiles(prefs.deleteUploadedFiles);
     
     // Always load user info after preferences
     loadUserInfo();
@@ -114,24 +109,17 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
   
   const savePreferences = () => {
     pythonBridge.savePreferences({
-      recordingPath, 
-      outputPath,
-      uploadFrequency,
-      showRecordButton,
       startRecordingKey,
-      stopRecordingKey
+      stopRecordingKey,
+      apiToken,
+      deleteUploadedFiles
     });
+    
+    // After saving preferences, automatically start the Python bridges
+    pythonBridge.startRecordingBridge();
+    pythonBridge.startUploadBridge();
   };
   
-  const handleBrowseOutputPath = async () => {
-    try {
-      const { ElectronService } = require('../services/electron-service');
-      const path = await ElectronService.openSaveDialog();
-      if (path) setOutputPath(path);
-    } catch (error) {
-      console.error('Error browsing for output path:', error);
-    }
-  };
   
   const handleLogout = async () => {
     await authService.logout();
@@ -153,10 +141,6 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
     }
   };
 
-  const handleUploadFrequencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setUploadFrequency(e.target.value as AppPreferences['uploadFrequency']);
-  };
-  
   const handleSaveAndExit = () => {
     // Save preferences
     savePreferences();
@@ -175,10 +159,10 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
     }
   };
 
-  const toggleRecordButton = () => {
-    const newValue = !showRecordButton;
-    console.log("Setting showRecordButton to:", newValue);
-    setShowRecordButton(newValue);
+  const toggleDeleteUploadedFiles = () => {
+    const newValue = !deleteUploadedFiles;
+    console.log("Setting deleteUploadedFiles to:", newValue);
+    setDeleteUploadedFiles(newValue);
   };
   
   return (
@@ -213,71 +197,52 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
           </div>
         )}
         
-        {/* Output Path Section */}
+        {/* API Token Section */}
         <div className="bg-[#13151a] rounded-lg border border-[#2a2d35] p-4">
-          <h3 className="mb-4 text-sm font-medium text-white select-none">Output Path</h3>
+          <h3 className="mb-4 text-sm font-medium text-white select-none">OWL API Token</h3>
           <div className="space-y-4">
-            <div className="grid grid-cols-[1fr,auto] gap-4 items-center">
+            <div className="grid grid-cols-1 gap-4 items-center">
               <div>
                 <Input
-                  id="outputPath"
-                  value={outputPath}
-                  onChange={(e) => setOutputPath(e.target.value)}
+                  id="apiToken"
+                  value={apiToken}
+                  onChange={(e) => setApiToken(e.target.value)}
                   className="bg-[#0c0c0f] border-[#2a2d35] text-white"
+                  placeholder="Enter your OWL API token"
                 />
               </div>
-              <button
-                className="bg-black text-white px-4 py-2 rounded-md font-medium h-10 self-end select-none"
-                onClick={handleBrowseOutputPath}
-              >
-                Browse
-              </button>
             </div>
           </div>
         </div>
         
-        {/* Upload & Recording Settings */}
+        {/* Upload Settings */}
         <div className="bg-[#13151a] rounded-lg border border-[#2a2d35] p-4">
-          <h3 className="mb-4 text-sm font-medium text-white select-none">Upload & Recording Settings</h3>
+          <h3 className="mb-4 text-sm font-medium text-white select-none">Upload Settings</h3>
           <div className="space-y-4">
             <div className="grid grid-cols-[1fr,1fr] gap-4 items-center">
-              <Label htmlFor="uploadFrequency" className="text-sm text-white select-none">Upload Frequency</Label>
-              <select
-                id="uploadFrequency"
-                value={uploadFrequency}
-                onChange={handleUploadFrequencyChange}
-                className="bg-[#0c0c0f] border border-[#2a2d35] rounded-md px-3 py-2 text-white"
-              >
-                <option value="one">One-time</option>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-              </select>
-            </div>
-            <div className="grid grid-cols-[1fr,1fr] gap-4 items-center">
-              <Label className="text-sm text-white select-none">Show Record Button</Label>
+              <Label className="text-sm text-white select-none">Delete Files After Upload</Label>
               <div className="flex items-center">
                 {/* Custom checkbox implementation */}
                 <div 
                   className="relative flex items-center select-none cursor-pointer" 
-                  onClick={toggleRecordButton}
+                  onClick={toggleDeleteUploadedFiles}
                 >
                   {/* Custom checkbox */}
                   <div 
                     className={`w-5 h-5 mr-2 border rounded flex items-center justify-center ${
-                      showRecordButton 
+                      deleteUploadedFiles 
                         ? 'bg-[#1a73e8] border-[#1a73e8]' 
                         : 'bg-[#0c0c0f] border-[#2a2d35]'
                     }`}
                   >
-                    {showRecordButton && (
+                    {deleteUploadedFiles && (
                       <Check className="h-3.5 w-3.5 text-white" />
                     )}
                   </div>
                   
                   {/* Checkbox label */}
                   <span className="text-white select-none">
-                    Display record button on main screen
+                    Delete local files after successful upload
                   </span>
                 </div>
               </div>
@@ -295,7 +260,7 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
                 id="startRecordingKey"
                 value={startRecordingKey}
                 onChange={(e) => setStartRecordingKey(e.target.value)}
-                placeholder="e.g., CommandOrControl+Shift+R"
+                placeholder="e.g., f4"
                 className="bg-[#0c0c0f] border-[#2a2d35] text-white"
                 onKeyDown={(e) => {
                   e.preventDefault();
@@ -316,7 +281,7 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
                 id="stopRecordingKey"
                 value={stopRecordingKey}
                 onChange={(e) => setStopRecordingKey(e.target.value)}
-                placeholder="e.g., CommandOrControl+Shift+S"
+                placeholder="e.g., f5"
                 className="bg-[#0c0c0f] border-[#2a2d35] text-white"
                 onKeyDown={(e) => {
                   e.preventDefault();
@@ -330,7 +295,7 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
                   setStopRecordingKey(keys.join('+'));
                 }}
               />
-              <p className="text-xs text-gray-400">Press the key combination you want to use</p>
+              <p className="text-xs text-gray-400">Enter the key for starting/stopping recording (defaults: f4/f5). Note: Only simple keys like F1-F12, or letters are supported by the Python hotkey system.</p>
             </div>
           </div>
         </div>

@@ -23,11 +23,13 @@ def filter_invalid_sample(vid_path, csv_path, meta_path, verbose = False):
     with open(meta_path) as f:
         metadata = json.load(f)
     duration = float(metadata['duration'])
+    
+    is_invalid = False
 
     if duration < MIN_FOOTAGE:
         if verbose:
             print(f"Video length {duration:.2f} too short.")
-        return True
+        is_invalid = True
     if duration > MAX_FOOTAGE + 10:
         if verbose:
             print(f"Video length {duration:.2f} too long.")
@@ -41,32 +43,32 @@ def filter_invalid_sample(vid_path, csv_path, meta_path, verbose = False):
     if vid_size < 0.25 * expected_bits:  # Less than quarter of expected size is unlikely
         if verbose:
             print(f"Video size {vid_size:.2f} Mb too small compared to expected {expected_bits:.2f} Mb")
-        return True
+        is_invalid = True
     
     btn_stats = get_button_stats(csv_path)
     mouse_stats = get_mouse_stats(csv_path)
 
     # Filter out samples with too little activity
-    if btn_stats['wasd_apm'] < 20:  # Less than 20 actions per minute is likely AFK/inactive
+    if btn_stats['wasd_apm'] < 10:  # Less than 20 actions per minute is likely AFK/inactive
         if verbose:
             print(f"WASD actions per minute too low: {btn_stats['wasd_apm']:.1f}")
-        return True
+        is_invalid = True
         
     if btn_stats['total_keyboard_events'] < 100:  # Too few keyboard events overall
         if verbose:
             print(f"Too few keyboard events: {btn_stats['total_keyboard_events']}")
-        return True
+        is_invalid = True
 
     # Filter out samples with abnormal mouse behavior
     if mouse_stats['overall_max'] < 0.05:  # Very little mouse movement
         if verbose:
             print(f"Mouse movement too small: {mouse_stats['overall_max']:.3f}")
-        return True
+        is_invalid = True
         
     if mouse_stats['overall_max'] > 500:  # Unreasonably large mouse movements
         if verbose:
             print(f"Mouse movement too large: {mouse_stats['overall_max']:.1f}")
-        return True
+        is_invalid = True
 
     # Add stats to metadata
     extra_metadata = {
@@ -89,7 +91,7 @@ def filter_invalid_sample(vid_path, csv_path, meta_path, verbose = False):
         with open(meta_path, 'w') as f:
             json.dump(metadata, f, indent=4)
 
-    return False
+    return is_invalid
 
 class OWLDataManager:
     def __init__(self, token):
@@ -131,6 +133,7 @@ class OWLDataManager:
                 try:
                     invalid = filter_invalid_sample(mp4_src_path, csv_src_path, meta_src_path, verbose = True)
                 except:
+                    print("Warning: Invalid data skipped by uploader.")
                     invalid = True
 
                 if invalid:
@@ -144,6 +147,8 @@ class OWLDataManager:
 
                 self.staged_files.append(root)
                 file_counter += 1
+        return file_counter > 0
+    
 
     def compress(self):
         import uuid
@@ -163,14 +168,12 @@ class OWLDataManager:
         tar_name = f"{self.current_tar_uuid}.tar"
         
         try:
-            OWL_TOKEN = None # TODO
-            upload_archive(OWL_TOKEN, tar_name)
-        finally:
-            # Mark files as uploaded
+            upload_archive(self.token, tar_name)
             for staged_path in self.staged_files:
                 with open(os.path.join(staged_path, '.uploaded'), 'w') as f:
                     f.write('')
-                    
+
+        finally:
             # Cleanup
             if os.path.exists(tar_name):
                 os.remove(tar_name)
@@ -192,9 +195,10 @@ class OWLDataManager:
 
 def upload_all_files(token, delete_uploaded=False):
     manager = OWLDataManager(token)
-    manager.stage()
-    manager.compress()
-    manager.upload()
+    has_files = manager.stage()
+    if has_files:
+        manager.compress()
+        manager.upload()
 
     if delete_uploaded:
         manager.delete_uploaded()

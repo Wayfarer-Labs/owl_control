@@ -11,7 +11,7 @@ def main():
     # Parse arguments
     args = parser.parse_args()
     
-    token = args.api_token
+    token = args.api_token.strip()
     del_uploaded = args.delete_uploaded_files
     
     print(f"Upload bridge starting with token={token[:4]}... and delete_after_upload={del_uploaded}")
@@ -21,7 +21,11 @@ def main():
         print("Upload completed successfully")
         return 0
     except Exception as e:
-        print(f"Error during upload: {str(e)}")
+        import traceback
+        error_msg = f"Error during upload: {str(e)}\n\nTraceback:\n{traceback.format_exc()}"
+        print(error_msg)
+        with open('error.txt', 'w') as f:
+            f.write(error_msg)
         return 1
 
 if __name__ == "__main__":

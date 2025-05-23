@@ -7,7 +7,7 @@ import pandas as pd
 import os
 import torch
 
-def process_video(video_dir):
+def process_video(video_dir, return_tensor = False):
     """
     Process mouse movement data from a video directory containing inputs.csv
     Extracts per-frame mouse delta movements and saves as tensor chunks
@@ -63,6 +63,9 @@ def process_video(video_dir):
         frame_idx = int(row['frame'])
         movement_tensor[frame_idx] = torch.tensor([row['dx'], row['dy']], dtype=torch.bfloat16)
 
+    if return_tensor:
+        return movement_tensor
+    
     # Split into chunks and save
     for chunk_idx in range(0, total_frames, SPLIT_SIZE):
         end_idx = min(chunk_idx + SPLIT_SIZE, total_frames)

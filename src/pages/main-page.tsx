@@ -7,13 +7,11 @@ import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { AuthService } from '@/services/auth-service';
 import { PythonBridge } from '@/services/python-bridge';
-import { Settings, Video, Play, Square, Home, LogOut } from 'lucide-react';
+import { Settings, Video, Home, LogOut, Info } from 'lucide-react';
 
 export function MainPage() {
   const [activeTab, setActiveTab] = useState<'home' | 'settings'>('home');
-  const [recordingPath, setRecordingPath] = useState('');
-  const [outputPath, setOutputPath] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
+  const [apiToken, setApiToken] = useState('');
   const [statusMessage, setStatusMessage] = useState('Ready');
   const [userInfo, setUserInfo] = useState<any>(null);
   
@@ -23,10 +21,13 @@ export function MainPage() {
   // Load preferences on component mount
   useEffect(() => {
     const prefs = pythonBridge.loadPreferences();
-    if (prefs.recordingPath) setRecordingPath(prefs.recordingPath);
-    if (prefs.outputPath) setOutputPath(prefs.outputPath);
+    if (prefs.apiToken) setApiToken(prefs.apiToken);
     
     loadUserInfo();
+    
+    // Start the Python bridges
+    pythonBridge.startRecordingBridge();
+    pythonBridge.startUploadBridge();
   }, []);
   
   const loadUserInfo = async () => {
@@ -36,55 +37,15 @@ export function MainPage() {
   
   const savePreferences = () => {
     pythonBridge.savePreferences({
-      recordingPath,
-      outputPath
+      apiToken
     });
-    setStatusMessage('Preferences saved');
+    setStatusMessage('API Token saved');
     setTimeout(() => setStatusMessage('Ready'), 2000);
-  };
-  
-  const handleStartRecording = async () => {
-    if (!recordingPath || !outputPath) {
-      setStatusMessage('Please set recording and output paths first');
-      return;
-    }
     
-    setStatusMessage('Starting recording...');
-    const success = await pythonBridge.startRecording(recordingPath, outputPath);
-    
-    if (success) {
-      setIsRecording(true);
-      setStatusMessage('Recording in progress');
-    } else {
-      setStatusMessage('Failed to start recording');
-    }
+    // Restart the upload bridge with the new API token
+    pythonBridge.startUploadBridge();
   };
   
-  const handleStopRecording = async () => {
-    setStatusMessage('Stopping recording...');
-    const success = await pythonBridge.stopRecording();
-    
-    if (success) {
-      setIsRecording(false);
-      setStatusMessage('Recording saved');
-    } else {
-      setStatusMessage('Failed to stop recording');
-    }
-  };
-  
-  const handleBrowseRecordingPath = () => {
-    // In Electron, we would open a dialog here
-    // For now, we'll just simulate it
-    const path = prompt('Enter recording path:');
-    if (path) setRecordingPath(path);
-  };
-  
-  const handleBrowseOutputPath = () => {
-    // In Electron, we would open a dialog here
-    // For now, we'll just simulate it
-    const path = prompt('Enter output path:');
-    if (path) setOutputPath(path);
-  };
   
   const handleLogout = async () => {
     await authService.logout();
@@ -161,62 +122,34 @@ export function MainPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                           <div className="rounded-full bg-primary/10 p-2">
-                            <Video className="h-5 w-5 text-primary" />
+                            <Info className="h-5 w-5 text-primary" />
                           </div>
                           <div>
-                            <p className="text-sm font-medium">Status</p>
-                            <p className="text-sm text-muted-foreground">{statusMessage}</p>
+                            <p className="text-sm font-medium">Recording Status</p>
+                            <p className="text-sm text-muted-foreground">Recording is handled by hotkeys (default: F4 to start, F5 to stop)</p>
                           </div>
-                        </div>
-                        <div>
-                          {isRecording ? (
-                            <Button 
-                              variant="destructive" 
-                              size="sm"
-                              onClick={handleStopRecording}
-                              className="flex items-center"
-                            >
-                              <Square className="mr-2 h-4 w-4" />
-                              Stop Recording
-                            </Button>
-                          ) : (
-                            <Button 
-                              variant="default" 
-                              size="sm"
-                              onClick={handleStartRecording}
-                              className="flex items-center"
-                            >
-                              <Play className="mr-2 h-4 w-4" />
-                              Start Recording
-                            </Button>
-                          )}
                         </div>
                       </div>
                     </div>
                     
                     <div className="rounded-lg border p-4">
                       <div className="mb-4">
-                        <h3 className="text-sm font-medium">Recording Paths</h3>
+                        <h3 className="text-sm font-medium">API Settings</h3>
                       </div>
                       <div className="grid gap-4">
                         <div className="grid grid-cols-3 items-center gap-4">
-                          <Label htmlFor="recordingPath" className="text-sm">OBS Recording Path</Label>
+                          <Label htmlFor="apiToken" className="text-sm">OWL API Token</Label>
                           <Input
-                            id="recordingPath"
-                            value={recordingPath}
-                            onChange={(e) => setRecordingPath(e.target.value)}
+                            id="apiToken"
+                            value={apiToken}
+                            onChange={(e) => setApiToken(e.target.value)}
                             className="col-span-2 h-8"
+                            placeholder="Enter your OWL API token"
                           />
                         </div>
-                        <div className="grid grid-cols-3 items-center gap-4">
-                          <Label htmlFor="outputPath" className="text-sm">Output Data Path</Label>
-                          <Input
-                            id="outputPath"
-                            value={outputPath}
-                            onChange={(e) => setOutputPath(e.target.value)}
-                            className="col-span-2 h-8"
-                          />
-                        </div>
+                        <Button onClick={savePreferences} className="justify-self-end">
+                          Save API Token
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -231,46 +164,37 @@ export function MainPage() {
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="rounded-lg border p-4">
-                      <h3 className="mb-4 text-sm font-medium">Recording Paths</h3>
+                      <h3 className="mb-4 text-sm font-medium">Hotkey Information</h3>
+                      <div className="mb-4">
+                        <p className="text-sm text-muted-foreground">
+                          Recording is handled by the following default hotkeys:
+                        </p>
+                        <ul className="list-disc pl-5 mt-2 text-sm text-muted-foreground">
+                          <li>Start Recording: F4</li>
+                          <li>Stop Recording: F5</li>
+                        </ul>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          You can change these hotkeys in the Settings window accessible from the system tray.
+                        </p>
+                      </div>
+                      <h3 className="mb-4 text-sm font-medium">API Token</h3>
                       <div className="grid gap-4">
                         <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="recordingPathFull" className="text-sm">OBS Recording Path</Label>
+                          <Label htmlFor="apiTokenFull" className="text-sm">OWL API Token</Label>
                           <Input
-                            id="recordingPathFull"
-                            value={recordingPath}
-                            onChange={(e) => setRecordingPath(e.target.value)}
-                            className="col-span-2 h-8"
+                            id="apiTokenFull"
+                            value={apiToken}
+                            onChange={(e) => setApiToken(e.target.value)}
+                            className="col-span-3 h-8"
+                            placeholder="Enter your OWL API token"
                           />
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={handleBrowseRecordingPath}
-                          >
-                            Browse
-                          </Button>
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="outputPathFull" className="text-sm">Output Data Path</Label>
-                          <Input
-                            id="outputPathFull"
-                            value={outputPath}
-                            onChange={(e) => setOutputPath(e.target.value)}
-                            className="col-span-2 h-8"
-                          />
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={handleBrowseOutputPath}
-                          >
-                            Browse
-                          </Button>
                         </div>
                       </div>
                     </div>
                     
                     <div className="flex justify-end">
                       <Button onClick={savePreferences}>
-                        Save Settings
+                        Save API Token
                       </Button>
                     </div>
                   </CardContent>

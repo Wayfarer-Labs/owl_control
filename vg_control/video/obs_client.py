@@ -102,7 +102,7 @@ class OBSClient:
         if 'owl_game_capture' in input_names:
             # Delete it so we can recreate with right settings
             self.req_client.remove_input('owl_game_capture')
-            time.sleep(0.1) # Give it a second to refresh
+            time.sleep(0.5) # Give it a second to refresh
 
         self.req_client.create_input(
             "owl_data_collection_scene",

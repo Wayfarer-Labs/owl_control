@@ -88,7 +88,7 @@ export function ConsentPage({ apiKey, onConsent, onCancel }: ConsentPageProps) {
       <div className="consent-page-content flex-1 flex items-center justify-center p-6" style={{ backgroundColor: '#0c0c0f' }}>
         <div className="w-full max-w-[700px] space-y-6">
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-white mb-2">Informed Consent</h1>
+            <h1 className="text-3xl font-bold text-white mb-2">Informed Consent & Terms of Service</h1>
             <p className="text-[#828691]">Please read the following information carefully</p>
           </div>
           
@@ -183,13 +183,30 @@ export function ConsentPage({ apiKey, onConsent, onCancel }: ConsentPageProps) {
                 </div>
                 
                 <div>
+                  <h3 className="text-md font-bold text-white mb-1">Content Policy & Legal Terms</h3>
+                  <p className="text-sm">
+                    <strong>Important:</strong> You agree not to upload any content that is:<br />
+                    - Illegal in your jurisdiction or country of origin<br />
+                    - Malicious, harmful, or inappropriate<br />
+                    - In violation of any applicable laws or regulations<br />
+                    <br />
+                    If you upload content that violates these terms, we will take necessary and proportional actions, which may include:<br />
+                    - Removal of your content<br />
+                    - Suspension or termination of your access<br />
+                    - Reporting to appropriate authorities<br />
+                    - Other legal remedies as required by law
+                  </p>
+                </div>
+                
+                <div>
                   <h3 className="text-md font-bold text-white mb-1">Consent</h3>
                   <p className="text-sm">
                     By clicking "Accept" below you confirm that:<br />
                     - You have read and understood the above information<br />
                     - You are 18 years or older<br />
                     - You voluntarily agree to participate<br />
-                    - You understand you can withdraw at any time
+                    - You understand you can withdraw at any time<br />
+                    - You agree to comply with the content policy and legal terms
                   </p>
                 </div>
                 
@@ -233,7 +250,7 @@ export function ConsentPage({ apiKey, onConsent, onCancel }: ConsentPageProps) {
                 opacity: !hasReadConsent ? 0.5 : 1
               }}
             >
-              I agree to the informed consent
+              I agree to the informed consent & terms of service
             </button>
           </div>
         </div>
