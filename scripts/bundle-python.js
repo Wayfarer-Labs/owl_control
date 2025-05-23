@@ -99,7 +99,7 @@ coll = COLLECT(
 fs.writeFileSync(path.join(__dirname, '..', 'vg_control.spec'), specContent);
 
 console.log('Building Python executable with PyInstaller...');
-execSync('pyinstaller vg_control.spec --distpath python-dist --workpath build/pyinstaller --clean', { 
+execSync('pyinstaller vg_control.spec --distpath python-dist --workpath build/pyinstaller --clean -y', { 
   stdio: 'inherit',
   cwd: path.join(__dirname, '..')
 });

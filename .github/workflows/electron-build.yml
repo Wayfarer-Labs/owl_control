@@ -13,7 +13,8 @@ jobs:
     
     strategy:
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [windows-latest]
+        # os: [macos-latest, windows-latest, ubuntu-latest]  # Uncomment to enable all platforms
         
     steps:
       - name: Check out Git repository
