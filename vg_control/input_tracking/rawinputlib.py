@@ -145,7 +145,7 @@ class RawInputReader:
             for input in self.inputs:
                 data = input.get()
                 if data is not None:
-                    await broadcast(data)
+                    broadcast(data)
                     break
             await asyncio.sleep(polling_frequency)
 
