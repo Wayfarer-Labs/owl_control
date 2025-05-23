@@ -19,9 +19,7 @@ from .constants import (
     TIME_TO_STOP
 )
 from .input_tracking.rawinputlib import (
-    HotkeyManager,
-    wait_until_input, wait_until_idle,
-    RAW_INPUT
+    HotkeyManager
 )
 
 class SimpleRecorder:
@@ -38,12 +36,26 @@ class SimpleRecorder:
         self.game_running_task = None
         self.timer_task = None
 
+        self._saw_user_input_event = asyncio.Event()
+
+    def saw_user_input(self):
+        self._saw_user_input_event.set()
+        self._saw_user_input_event = asyncio.Event()
+
     async def detect_idleing(self):
-        await wait_until_idle(INACTIVITY_TIME)
+        await self.wait_until_idle(INACTIVITY_TIME)
         await self.stop_recording(cancel_idle_task=False)
         # Wait until further input then go again
-        await wait_until_input()
+        await self._saw_user_input_event.wait()
         await self.start_recording()
+    
+    async def wait_until_idle(self, timeout: float):
+        while True:
+            try:
+                await asyncio.wait_for(self._saw_user_input_event.wait(), timeout)
+            except asyncio.TimeoutError:
+                return
+
 
     def is_window_fullscreen(self, hwnd):
         try:
@@ -184,8 +196,6 @@ async def main():
     except KeyboardInterrupt:
         if recorder.is_recording:
             await recorder.stop_recording()
-    finally:
-        RAW_INPUT.close()
 
 if __name__ == "__main__":
     asyncio.run(main())
