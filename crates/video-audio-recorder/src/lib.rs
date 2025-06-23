@@ -17,29 +17,27 @@ fn create_pipeline(path: &Path, _pid: u32, hwnd: usize) -> Result<Pipeline> {
     // Loopback is bugged: gstreamer/gstreamer#4259
     // Add the following parameters once it's fixed: remove loopback=true and add "loopback-target-pid={pid} loopback-mode=include-process-tree"
     let video = format!(
-            "
-            d3d12screencapturesrc window-handle={hwnd}
-            ! video/x-raw,format=BGRA,framerate=60/1,width=1920,height=1080
-            ! queue name=q_video leaky=2 max-size-buffers=300 max-size-bytes=0 max-size-time=0  
-            ! videorate
-            ! videoscale
-            ! nvh264enc preset=default zerolatency=true bitrate=15000 rc-mode=cbr gop-size=-1  
-            ! h264parse
-            ! mp4mux name=mux_main faststart=true                                                
+        r#"
+        d3d12screencapturesrc name=videosrc window-handle={hwnd} ! 
+        video/x-raw,framerate=60/1 ! 
+        queue name=q_video_src ! 
+        d3d12download ! 
+        videoconvert ! 
+        queue name=q_video_enc ! 
+        nvh264enc preset=hq rc-mode=cbr bitrate=15000 ! 
+        h264parse ! 
+        mp4mux name=mux ! 
+        filesink name=filesink
 
-            wasapi2src loopback=true
-            ! audio/x-raw,channels=2,rate=48000
-            ! queue name=q_audio leaky=2 max-size-buffers=300
-            ! audioconvert
-            ! voaacenc bitrate=160000
-            ! aacparse
-            ! mux_main.
-
-            mux_main.
-            ! queue name=q_file leaky=2 max-size-buffers=300 max-size-bytes=0 max-size-time=0   
-            ! filesink name=filesink    
-        "
-        );
+        wasapi2src name=audiosrc loopback=true ! 
+        queue name=q_audio_src ! 
+        audioconvert ! 
+        audioresample ! 
+        avenc_aac ! 
+        queue name=q_audio_enc !
+        mux.
+        "#
+    );
 
     let pipeline = gstreamer::parse::launch(&video)?
         .dynamic_cast::<Pipeline>()

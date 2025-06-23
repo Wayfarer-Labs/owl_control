@@ -4,7 +4,7 @@
   "description": "Video game control input tracking application",
   "main": "dist/main.js",
   "scripts": {
-    "start": "set RUST_BACKTRACE=1 && electron .",
+    "start": "set RUST_BACKTRACE=1 && set GST_DEBUG=3 && electron .",
     "dev": "cargo build --bin owl-recorder && cross-env NODE_ENV=development npm run build && cross-env NODE_ENV=development concurrently \"npm run watch\" \"electron .\"",
     "build": "webpack --config webpack.config.js",
     "watch": "webpack --config webpack.config.js --watch",
