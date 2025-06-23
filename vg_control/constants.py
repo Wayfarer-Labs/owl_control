@@ -21,6 +21,7 @@ POLLS_PER_FRAME=20 # Hard coded
 GAME_LIST = [
     'DOOMEternalx64vk',
     'DOOMx64',
+    'DOOMTheDarkAges',
     'FactoryGame',
     'Titanfall2',
     'SkyrimSE',

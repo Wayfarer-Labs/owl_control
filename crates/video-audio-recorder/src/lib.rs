@@ -19,13 +19,25 @@ fn create_pipeline(path: &Path, _pid: u32, hwnd: usize) -> Result<Pipeline> {
     let video = format!(
             "
             d3d12screencapturesrc window-handle={hwnd}
-            ! encoder.video_0
+            ! video/x-raw,format=BGRA,framerate=60/1,width=1920,height=1080
+            ! queue name=q_video leaky=2 max-size-buffers=300 max-size-bytes=0 max-size-time=0  
+            ! videorate
+            ! videoscale
+            ! nvh264enc preset=default zerolatency=true bitrate=15000 rc-mode=cbr gop-size=-1  
+            ! h264parse
+            ! mp4mux name=mux_main faststart=true                                                
 
             wasapi2src loopback=true
-            ! encoder.audio_0
+            ! audio/x-raw,channels=2,rate=48000
+            ! queue name=q_audio leaky=2 max-size-buffers=300
+            ! audioconvert
+            ! voaacenc bitrate=160000
+            ! aacparse
+            ! mux_main.
 
-            encodebin2 name=encoder profile=video/quicktime,variant=iso:video/x-raw,width=1920,height=1080,framerate=60/1->video/x-h264:audio/x-raw,channels=2,rate=48000->audio/mpeg,mpegversion=1,layer=3
-            ! filesink name=filesink
+            mux_main.
+            ! queue name=q_file leaky=2 max-size-buffers=300 max-size-bytes=0 max-size-time=0   
+            ! filesink name=filesink    
         "
         );
 
