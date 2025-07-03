@@ -169,15 +169,15 @@ impl Recording {
             self.window_recorder.stop_recording();
             self.window_recorder_listener.await.unwrap()?;
 
-            // Get file size and finalize metrics
+            // Try to save performance metrics, but don't fail the recording if this fails
             let file_size = self.window_recorder.get_file_size();
             let performance_metrics = self.metrics_collector.finalize_metrics(file_size);
-
-            // Save performance metrics
             let metrics_path = self.metadata_path.parent()
                 .unwrap_or_else(|| std::path::Path::new("."))
                 .join("performance_metrics.json");
-            Self::write_performance_metrics(&metrics_path, &performance_metrics).await?;
+            if let Err(e) = Self::write_performance_metrics(&metrics_path, &performance_metrics).await {
+                tracing::warn!("Failed to save performance metrics: {}", e);
+            }
         }
 
         self.input_recorder.stop().await?;
