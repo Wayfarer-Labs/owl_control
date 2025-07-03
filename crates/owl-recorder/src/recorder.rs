@@ -8,6 +8,9 @@ use crate::{
     recording::{InputParameters, MetadataParameters, Recording, WindowParameters},
 };
 
+#[cfg(feature = "real-video")]
+use video_audio_recorder::MetricsEvent;
+
 pub(crate) struct Recorder<D> {
     recording_dir: D,
     games: Vec<Game>,
@@ -92,6 +95,17 @@ where
             return Ok(());
         };
         recording.sample_system_resources()
+    }
+
+    pub(crate) fn handle_metrics_events(&mut self) {
+        let Some(recording) = self.recording.as_mut() else {
+            return;
+        };
+
+        // Process all available metrics events
+        while let Some(event) = recording.try_recv_metrics_event() {
+            recording.handle_metrics_event(event);
+        }
     }
 
     pub(crate) async fn stop(&mut self) -> Result<()> {

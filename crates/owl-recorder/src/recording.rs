@@ -9,7 +9,9 @@ use serde::Serialize;
 use tokio_util::task::AbortOnDropHandle;
 
 #[cfg(feature = "real-video")]
-use video_audio_recorder::{WindowRecorder, PerformanceMetrics};
+use video_audio_recorder::{WindowRecorder, PerformanceMetrics, MetricsEvent, MetricsCollector};
+#[cfg(feature = "real-video")]
+use tokio::sync::mpsc;
 
 use crate::{hardware_id, input_recorder::InputRecorder};
 
@@ -18,6 +20,10 @@ pub(crate) struct Recording {
     window_recorder: WindowRecorder,
     #[cfg(feature = "real-video")]
     window_recorder_listener: AbortOnDropHandle<Result<()>>,
+    #[cfg(feature = "real-video")]
+    metrics_collector: MetricsCollector,
+    #[cfg(feature = "real-video")]
+    metrics_rx: mpsc::UnboundedReceiver<MetricsEvent>,
     input_recorder: InputRecorder,
 
     metadata_path: PathBuf,
@@ -61,11 +67,13 @@ impl Recording {
         let start_instant = Instant::now();
 
         #[cfg(feature = "real-video")]
-        let window_recorder =
+        let (window_recorder, metrics_rx) =
             WindowRecorder::start_recording(&video_path, pid.0, hwnd.0.expose_provenance())?;
         #[cfg(feature = "real-video")]
         let window_recorder_listener =
             AbortOnDropHandle::new(tokio::task::spawn(window_recorder.listen_to_messages()));
+        #[cfg(feature = "real-video")]
+        let metrics_collector = MetricsCollector::new()?;
 
         let input_recorder = InputRecorder::start(&csv_path).await?;
 
@@ -74,6 +82,10 @@ impl Recording {
             window_recorder,
             #[cfg(feature = "real-video")]
             window_recorder_listener,
+            #[cfg(feature = "real-video")]
+            metrics_collector,
+            #[cfg(feature = "real-video")]
+            metrics_rx,
 
             input_recorder,
 
@@ -124,27 +136,48 @@ impl Recording {
     pub(crate) fn sample_system_resources(&mut self) -> Result<()> {
         #[cfg(feature = "real-video")]
         {
-            self.window_recorder.sample_system_resources()?;
+            self.metrics_collector.sample_system_resources()?;
         }
         Ok(())
+    }
+
+    pub(crate) fn handle_metrics_event(&mut self, event: MetricsEvent) {
+        #[cfg(feature = "real-video")]
+        {
+            match event {
+                MetricsEvent::FrameDrop => self.metrics_collector.record_frame_drop(),
+                MetricsEvent::EncodingError => self.metrics_collector.record_encoding_error(),
+                MetricsEvent::PipelineStateChange => self.metrics_collector.record_pipeline_state_change(),
+            }
+        }
+    }
+
+    pub(crate) fn try_recv_metrics_event(&mut self) -> Option<MetricsEvent> {
+        #[cfg(feature = "real-video")]
+        {
+            self.metrics_rx.try_recv().ok()
+        }
+        #[cfg(not(feature = "real-video"))]
+        {
+            None
+        }
     }
 
     pub(crate) async fn stop(self) -> Result<()> {
         #[cfg(feature = "real-video")]
         {
-            // Get performance metrics before stopping
-            let performance_metrics = self.window_recorder.get_performance_metrics().ok();
-
             self.window_recorder.stop_recording();
             self.window_recorder_listener.await.unwrap()?;
 
-            // Save performance metrics if available
-            if let Some(metrics) = performance_metrics {
-                let metrics_path = self.metadata_path.parent()
-                    .unwrap_or_else(|| std::path::Path::new("."))
-                    .join("performance_metrics.json");
-                Self::write_performance_metrics(&metrics_path, &metrics).await?;
-            }
+            // Get file size and finalize metrics
+            let file_size = self.window_recorder.get_file_size();
+            let performance_metrics = self.metrics_collector.finalize_metrics(file_size);
+
+            // Save performance metrics
+            let metrics_path = self.metadata_path.parent()
+                .unwrap_or_else(|| std::path::Path::new("."))
+                .join("performance_metrics.json");
+            Self::write_performance_metrics(&metrics_path, &performance_metrics).await?;
         }
 
         self.input_recorder.stop().await?;

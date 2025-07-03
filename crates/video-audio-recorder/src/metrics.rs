@@ -1,6 +1,5 @@
 use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
-use gstreamer::prelude::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceMetrics {
@@ -204,7 +203,7 @@ impl SystemInfo {
         let cpu_threads = num_cpus::get() as u32; // Note: This gets logical CPUs, not physical threads
         let total_memory_mb = Self::get_total_memory_mb()?;
         let (gpu_name, gpu_memory_mb, gpu_driver_version) = Self::get_gpu_info();
-        let gstreamer_version = gstreamer::version_string();
+        let gstreamer_version = gstreamer::version_string().to_string();
         let rust_version = env!("RUSTC_VERSION", "unknown").to_string();
         
         Ok(Self {
