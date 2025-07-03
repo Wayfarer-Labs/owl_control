@@ -118,7 +118,7 @@ async fn main() -> Result<()> {
                 idleness_tracker.update_activity();
             },
             _ = perform_checks.tick() => {
-                if let Some(recording) = recorder.recording() {
+                if let Some(recording) = recorder.recording_mut() {
                     // Handle any pending metrics events from GStreamer
                     recorder.handle_metrics_events();
 

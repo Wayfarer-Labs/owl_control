@@ -33,6 +33,10 @@ where
         self.recording.as_ref()
     }
 
+    pub(crate) fn recording_mut(&mut self) -> Option<&mut Recording> {
+        self.recording.as_mut()
+    }
+
     pub(crate) async fn start(&mut self) -> Result<()> {
         if self.recording.is_some() {
             return Ok(());
