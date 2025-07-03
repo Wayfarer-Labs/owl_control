@@ -166,6 +166,9 @@ impl Recording {
     pub(crate) async fn stop(self) -> Result<()> {
         #[cfg(feature = "real-video")]
         {
+            // Close the metrics receiver to signal we're done collecting metrics
+            drop(self.metrics_rx);
+
             self.window_recorder.stop_recording();
             self.window_recorder_listener.await.unwrap()?;
 
