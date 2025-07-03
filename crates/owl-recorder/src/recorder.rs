@@ -87,6 +87,13 @@ where
         Ok(())
     }
 
+    pub(crate) fn sample_system_resources(&mut self) -> Result<()> {
+        let Some(recording) = self.recording.as_mut() else {
+            return Ok(());
+        };
+        recording.sample_system_resources()
+    }
+
     pub(crate) async fn stop(&mut self) -> Result<()> {
         let Some(recording) = self.recording.take() else {
             return Ok(());

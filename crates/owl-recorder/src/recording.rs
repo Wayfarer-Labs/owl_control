@@ -9,7 +9,7 @@ use serde::Serialize;
 use tokio_util::task::AbortOnDropHandle;
 
 #[cfg(feature = "real-video")]
-use video_audio_recorder::WindowRecorder;
+use video_audio_recorder::{WindowRecorder, PerformanceMetrics};
 
 use crate::{hardware_id, input_recorder::InputRecorder};
 
@@ -121,11 +121,31 @@ impl Recording {
         self.input_recorder.seen_input(e).await
     }
 
+    pub(crate) fn sample_system_resources(&mut self) -> Result<()> {
+        #[cfg(feature = "real-video")]
+        {
+            self.window_recorder.sample_system_resources()?;
+        }
+        Ok(())
+    }
+
     pub(crate) async fn stop(self) -> Result<()> {
         #[cfg(feature = "real-video")]
-        self.window_recorder.stop_recording();
-        #[cfg(feature = "real-video")]
-        self.window_recorder_listener.await.unwrap()?;
+        {
+            // Get performance metrics before stopping
+            let performance_metrics = self.window_recorder.get_performance_metrics().ok();
+
+            self.window_recorder.stop_recording();
+            self.window_recorder_listener.await.unwrap()?;
+
+            // Save performance metrics if available
+            if let Some(metrics) = performance_metrics {
+                let metrics_path = self.metadata_path.parent()
+                    .unwrap_or_else(|| std::path::Path::new("."))
+                    .join("performance_metrics.json");
+                Self::write_performance_metrics(&metrics_path, &metrics).await?;
+            }
+        }
 
         self.input_recorder.stop().await?;
 
@@ -148,6 +168,16 @@ impl Recording {
         let metadata = Self::final_metadata(game_exe, start_instant, start_time).await?;
         let metadata = serde_json::to_string_pretty(&metadata)?;
         tokio::fs::write(path, &metadata).await?;
+        Ok(())
+    }
+
+    #[cfg(feature = "real-video")]
+    async fn write_performance_metrics(
+        path: &Path,
+        metrics: &PerformanceMetrics,
+    ) -> Result<()> {
+        let metrics_json = serde_json::to_string_pretty(metrics)?;
+        tokio::fs::write(path, &metrics_json).await?;
         Ok(())
     }
 

@@ -119,6 +119,11 @@ async fn main() -> Result<()> {
             },
             _ = perform_checks.tick() => {
                 if let Some(recording) = recorder.recording() {
+                    // Sample system resources for performance metrics
+                    if let Err(e) = recorder.sample_system_resources() {
+                        tracing::warn!("Failed to sample system resources: {}", e);
+                    }
+
                     if !does_process_exist(recording.pid())? {
                         tracing::info!(pid=recording.pid().0, "Game process no longer exists, stopping recording");
                         recorder.stop().await?;
