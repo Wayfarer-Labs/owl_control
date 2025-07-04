@@ -392,7 +392,44 @@ impl SystemInfo {
             }
         }
         
+        // Try to get more accurate VRAM info using an alternative method
+        if let Some(accurate_vram) = Self::get_gpu_memory_alternative() {
+            memory_mb = Some(accurate_vram);
+        }
+        
         (name, memory_mb, driver_version)
+    }
+
+    #[cfg(target_os = "windows")]
+    fn get_gpu_memory_alternative() -> Option<u64> {
+        use std::process::Command;
+        
+        // Try using wmic with different query for dedicated video memory
+        let output = Command::new("wmic")
+            .args(&["path", "win32_VideoController", "get", "AdapterRAM,VideoMemoryType", "/value"])
+            .output()
+            .ok()?;
+        
+        let output_str = String::from_utf8_lossy(&output.stdout);
+        let mut max_memory = 0u64;
+        
+        // Look for the largest AdapterRAM value (likely the dedicated GPU)
+        for line in output_str.lines() {
+            if line.starts_with("AdapterRAM=") {
+                if let Ok(ram_bytes) = line.split('=').nth(1).unwrap_or("0").trim().parse::<u64>() {
+                    let ram_mb = ram_bytes / (1024 * 1024);
+                    if ram_mb > max_memory {
+                        max_memory = ram_mb;
+                    }
+                }
+            }
+        }
+        
+        if max_memory > 0 {
+            Some(max_memory)
+        } else {
+            None
+        }
     }
 
     #[cfg(target_os = "linux")]
