@@ -68,13 +68,13 @@ impl Recording {
         let start_instant = Instant::now();
 
         #[cfg(feature = "real-video")]
+        let metrics_collector = MetricsCollector::new(debug_level)?;
+        #[cfg(feature = "real-video")]
         let (window_recorder, metrics_rx) =
             WindowRecorder::start_recording(&video_path, pid.0, hwnd.0.expose_provenance())?;
         #[cfg(feature = "real-video")]
         let window_recorder_listener =
             AbortOnDropHandle::new(tokio::task::spawn(window_recorder.listen_to_messages()));
-        #[cfg(feature = "real-video")]
-        let metrics_collector = MetricsCollector::new(debug_level)?;
 
         let input_recorder = InputRecorder::start(&csv_path).await?;
 
