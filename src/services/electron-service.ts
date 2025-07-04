@@ -37,7 +37,7 @@ export class ElectronService {
   public static async startRecordingBridge(startKey: string, stopKey: string, debugLevel?: string): Promise<boolean> {
     const ipcRenderer = this.getIpcRenderer();
     if (!ipcRenderer) return false;
-    return ipcRenderer.invoke('start-recording-bridge', startKey, stopKey, debugLevel || 'none');
+    return ipcRenderer.invoke('start-recording-bridge', startKey, stopKey, debugLevel);
   }
   
   /**

@@ -20,7 +20,7 @@ export class PythonBridge {
     stopRecordingKey: 'f5',
     apiToken: '',
     deleteUploadedFiles: false,
-    debugLevel: 'none'
+    debugLevel: undefined
   };
 
   constructor() {
@@ -47,9 +47,7 @@ export class PythonBridge {
             if (!this.preferences.stopRecordingKey) {
               this.preferences.stopRecordingKey = 'f5';
             }
-            if (!this.preferences.debugLevel) {
-              this.preferences.debugLevel = 'none';
-            }
+            // debugLevel can be undefined (logging disabled)
           }
         })
         .catch(error => {
@@ -80,9 +78,7 @@ export class PythonBridge {
     if (!this.preferences.stopRecordingKey) {
       this.preferences.stopRecordingKey = 'f5';
     }
-    if (!this.preferences.debugLevel) {
-      this.preferences.debugLevel = 'none';
-    }
+    // debugLevel can be undefined (logging disabled)
     
     return this.preferences;
   }
