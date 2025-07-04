@@ -91,6 +91,9 @@ async fn main() -> Result<()> {
 
     let mut perform_checks = tokio::time::interval(Duration::from_secs(1));
     perform_checks.set_missed_tick_behavior(MissedTickBehavior::Delay);
+    
+    let mut system_resource_timer = tokio::time::interval(Duration::from_secs(10));
+    system_resource_timer.set_missed_tick_behavior(MissedTickBehavior::Delay);
 
     loop {
         tokio::select! {
@@ -125,10 +128,6 @@ async fn main() -> Result<()> {
                         recording.handle_metrics_event(event);
                     }
 
-                    // TEMPORARILY DISABLED: Sample system resources for performance metrics (blocking issue)
-                    // if let Err(e) = recording.sample_system_resources() {
-                    //     tracing::warn!("Failed to sample system resources: {}", e);
-                    // }
 
                     if !does_process_exist(recording.pid())? {
                         tracing::info!(pid=recording.pid().0, "Game process no longer exists, stopping recording");
@@ -143,6 +142,14 @@ async fn main() -> Result<()> {
                         recorder.start().await?;
                         idleness_tracker.update_activity();
                     };
+                }
+            },
+            _ = system_resource_timer.tick() => {
+                if let Some(recording) = recorder.recording_mut() {
+                    // Sample system resources less frequently to avoid blocking
+                    if let Err(e) = recording.sample_system_resources() {
+                        tracing::warn!("Failed to sample system resources: {}", e);
+                    }
                 }
             },
         }
