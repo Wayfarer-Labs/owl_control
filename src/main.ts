@@ -464,6 +464,7 @@ function startRecordingBridge(startKey: string, stopKey: string, debugLevel?: st
       '--start-key', startKey,
       '--stop-key', stopKey,
       ...GAME_LIST.flatMap(game => ['--games', game]),
+      ...(debugLevel ? ['--debug-level', debugLevel] : []),
     ], {
       cwd: rootDir(),
       env: {
@@ -675,9 +676,10 @@ function setupIpcHandlers() {
         const stopKey = secureStore.preferences.stopRecordingKey || 'f5';
         const apiToken = secureStore.credentials.apiKey || '';
         const deleteUploadedFiles = secureStore.preferences.deleteUploadedFiles || false;
+        const debugLevel = secureStore.preferences.debugLevel;
 
         // Restart the recording bridge
-        startRecordingBridge(startKey, stopKey);
+        startRecordingBridge(startKey, stopKey, debugLevel);
 
         // Restart the upload bridge
         startUploadBridge(apiToken, deleteUploadedFiles);
