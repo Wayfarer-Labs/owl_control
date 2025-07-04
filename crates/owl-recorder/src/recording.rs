@@ -62,6 +62,7 @@ impl Recording {
             hwnd,
         }: WindowParameters,
         InputParameters { path: csv_path }: InputParameters,
+        debug_level: Option<String>,
     ) -> Result<Self> {
         let start_time = SystemTime::now();
         let start_instant = Instant::now();
@@ -73,7 +74,7 @@ impl Recording {
         let window_recorder_listener =
             AbortOnDropHandle::new(tokio::task::spawn(window_recorder.listen_to_messages()));
         #[cfg(feature = "real-video")]
-        let metrics_collector = MetricsCollector::new()?;
+        let metrics_collector = MetricsCollector::new(debug_level)?;
 
         let input_recorder = InputRecorder::start(&csv_path).await?;
 

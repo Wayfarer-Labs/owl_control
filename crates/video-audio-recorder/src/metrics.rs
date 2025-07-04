@@ -3,49 +3,8 @@ use std::fs::OpenOptions;
 use std::io::{Write, BufWriter};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub enum DebugLevel {
-    None = 0,
-    Error = 1,
-    Warning = 2,
-    Fixme = 3,
-    Info = 4,
-    Debug = 5,
-    Log = 6,
-    Trace = 7,
-    Memdump = 8,
-}
-
-impl DebugLevel {
-    pub fn from_str(s: &str) -> Option<Self> {
-        match s.to_lowercase().as_str() {
-            "none" => Some(Self::None),
-            "error" => Some(Self::Error),
-            "warning" | "warn" => Some(Self::Warning),
-            "fixme" => Some(Self::Fixme),
-            "info" => Some(Self::Info),
-            "debug" => Some(Self::Debug),
-            "log" => Some(Self::Log),
-            "trace" => Some(Self::Trace),
-            "memdump" => Some(Self::Memdump),
-            _ => None,
-        }
-    }
-
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Self::None => "NONE",
-            Self::Error => "ERROR",
-            Self::Warning => "WARNING",
-            Self::Fixme => "FIXME",
-            Self::Info => "INFO",
-            Self::Debug => "DEBUG",
-            Self::Log => "LOG",
-            Self::Trace => "TRACE",
-            Self::Memdump => "MEMDUMP",
-        }
-    }
-}
+// Debug level is now handled as a GST_DEBUG format string
+// Examples: "*:3", "audiotestsrc:6,*:2", "audio*:5"
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceMetrics {
@@ -85,46 +44,17 @@ pub struct MetricsCollector {
     memory_samples: Vec<u64>,
     peak_memory: u64,
     system_info: SystemInfo,
-    debug_level: DebugLevel,
-    debug_log: Option<BufWriter<std::fs::File>>,
+    debug_level: Option<String>,
 }
 
 impl MetricsCollector {
-    pub fn new(debug_level: Option<DebugLevel>, debug_log_path: Option<&std::path::Path>) -> color_eyre::Result<Self> {
-        let debug_level = debug_level.unwrap_or(DebugLevel::None);
+    pub fn new(debug_level: Option<String>) -> color_eyre::Result<Self> {
         let system_info = SystemInfo::collect()?;
         
-
         // Configure GStreamer debug output
-        if debug_level > DebugLevel::None {
-            let gst_level = match debug_level {
-                DebugLevel::Error => gstreamer::DebugLevel::Error,
-                DebugLevel::Warning => gstreamer::DebugLevel::Warning,
-                DebugLevel::Fixme => gstreamer::DebugLevel::Fixme,
-                DebugLevel::Info => gstreamer::DebugLevel::Info,
-                DebugLevel::Debug => gstreamer::DebugLevel::Debug,
-                DebugLevel::Log => gstreamer::DebugLevel::Log,
-                DebugLevel::Trace => gstreamer::DebugLevel::Trace,
-                DebugLevel::Memdump => gstreamer::DebugLevel::Memdump,
-                DebugLevel::None => gstreamer::DebugLevel::None,
-            };
-            
-            let level_num = match debug_level {
-                DebugLevel::None => 0,
-                DebugLevel::Error => 1,
-                DebugLevel::Warning => 2,
-                DebugLevel::Fixme => 3,
-                DebugLevel::Info => 4,
-                DebugLevel::Debug => 5,
-                DebugLevel::Log => 6,
-                DebugLevel::Trace => 7,
-                DebugLevel::Memdump => 9,
-            };
-            std::env::set_var("GST_DEBUG", format!("*:{}", level_num));
-            
-            // Direct GStreamer debug output to log file
-            if let Some(log_path) = debug_log_path {
-                std::env::set_var("GST_DEBUG_FILE", log_path.to_string_lossy().to_string());
+        if let Some(ref debug_str) = debug_level {
+            if !debug_str.is_empty() && debug_str != "0" && debug_str != "*:0" {
+                gstreamer::log::set_threshold_from_string(debug_str, true);
             }
         }
 
@@ -138,7 +68,6 @@ impl MetricsCollector {
             peak_memory: 0,
             system_info,
             debug_level,
-            debug_log: None,
         };
 
         Ok(collector)

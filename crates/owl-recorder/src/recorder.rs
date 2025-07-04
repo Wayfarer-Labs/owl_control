@@ -15,17 +15,19 @@ pub(crate) struct Recorder<D> {
     recording_dir: D,
     games: Vec<Game>,
     recording: Option<Recording>,
+    debug_level: Option<String>,
 }
 
 impl<D> Recorder<D>
 where
     D: FnMut() -> PathBuf,
 {
-    pub(crate) fn new(recording_dir: D, games: Vec<Game>) -> Self {
+    pub(crate) fn new(recording_dir: D, games: Vec<Game>, debug_level: Option<String>) -> Self {
         Self {
             recording_dir,
             games,
             recording: None,
+            debug_level,
         }
     }
 
@@ -76,6 +78,7 @@ where
             InputParameters {
                 path: recording_location.join("inputs.csv"),
             },
+            self.debug_level.clone(),
         )
         .await?;
 

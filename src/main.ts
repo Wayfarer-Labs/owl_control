@@ -447,7 +447,7 @@ function updateTrayMenu() {
 // Start Python bridges after authentication
 
 // Start Python recording bridge
-function startRecordingBridge(startKey: string, stopKey: string) {
+function startRecordingBridge(startKey: string, stopKey: string, debugLevel?: string) {
   try {
     // Stop existing process if running
     if (pythonProcess) {
@@ -701,8 +701,8 @@ function setupIpcHandlers() {
   });
 
   // Start recording bridge
-  ipcMain.handle('start-recording-bridge', async (_, startKey: string, stopKey: string) => {
-    return startRecordingBridge(startKey, stopKey);
+  ipcMain.handle('start-recording-bridge', async (_, startKey: string, stopKey: string, debugLevel?: string) => {
+    return startRecordingBridge(startKey, stopKey, debugLevel);
   });
 
   // Start upload bridge

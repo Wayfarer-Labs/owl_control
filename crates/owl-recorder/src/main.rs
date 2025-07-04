@@ -43,6 +43,9 @@ struct Args {
 
     #[arg(long, default_value = "F5")]
     stop_key: String,
+
+    #[arg(long)]
+    debug_level: Option<String>,
 }
 
 const MAX_IDLE_DURATION: Duration = Duration::from_secs(30);
@@ -60,6 +63,7 @@ async fn main() -> Result<()> {
         games,
         start_key,
         stop_key,
+        debug_level,
     } = Args::parse();
 
     let games = games.into_iter().map(Game::new).collect();
@@ -80,6 +84,7 @@ async fn main() -> Result<()> {
             )
         },
         games,
+        debug_level,
     );
 
     let mut input_rx = listen_for_raw_inputs();
