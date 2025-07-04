@@ -1,5 +1,51 @@
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::fs::OpenOptions;
+use std::io::{Write, BufWriter};
 use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum DebugLevel {
+    None = 0,
+    Error = 1,
+    Warning = 2,
+    Fixme = 3,
+    Info = 4,
+    Debug = 5,
+    Log = 6,
+    Trace = 7,
+    Memdump = 8,
+}
+
+impl DebugLevel {
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "none" => Some(Self::None),
+            "error" => Some(Self::Error),
+            "warning" | "warn" => Some(Self::Warning),
+            "fixme" => Some(Self::Fixme),
+            "info" => Some(Self::Info),
+            "debug" => Some(Self::Debug),
+            "log" => Some(Self::Log),
+            "trace" => Some(Self::Trace),
+            "memdump" => Some(Self::Memdump),
+            _ => None,
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::None => "NONE",
+            Self::Error => "ERROR",
+            Self::Warning => "WARNING",
+            Self::Fixme => "FIXME",
+            Self::Info => "INFO",
+            Self::Debug => "DEBUG",
+            Self::Log => "LOG",
+            Self::Trace => "TRACE",
+            Self::Memdump => "MEMDUMP",
+        }
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceMetrics {
@@ -39,13 +85,39 @@ pub struct MetricsCollector {
     memory_samples: Vec<u64>,
     peak_memory: u64,
     system_info: SystemInfo,
+    debug_level: DebugLevel,
+    debug_log: Option<BufWriter<std::fs::File>>,
 }
 
 impl MetricsCollector {
-    pub fn new() -> color_eyre::Result<Self> {
+    pub fn new(debug_level: Option<DebugLevel>, debug_log_path: Option<&std::path::Path>) -> color_eyre::Result<Self> {
+        let debug_level = debug_level.unwrap_or(DebugLevel::None);
         let system_info = SystemInfo::collect()?;
         
-        Ok(Self {
+
+        // Configure GStreamer debug output
+        if debug_level > DebugLevel::None {
+            let gst_level = match debug_level {
+                DebugLevel::Error => gstreamer::DebugLevel::Error,
+                DebugLevel::Warning => gstreamer::DebugLevel::Warning,
+                DebugLevel::Fixme => gstreamer::DebugLevel::Fixme,
+                DebugLevel::Info => gstreamer::DebugLevel::Info,
+                DebugLevel::Debug => gstreamer::DebugLevel::Debug,
+                DebugLevel::Log => gstreamer::DebugLevel::Log,
+                DebugLevel::Trace => gstreamer::DebugLevel::Trace,
+                DebugLevel::Memdump => gstreamer::DebugLevel::Memdump,
+                DebugLevel::None => gstreamer::DebugLevel::None,
+            };
+            
+            gstreamer::debug_set_default_threshold(gst_level);
+            
+            // Direct GStreamer debug output to log file
+            if let Some(log_path) = debug_log_path {
+                std::env::set_var("GST_DEBUG_FILE", log_path.to_string_lossy().to_string());
+            }
+        }
+
+        let mut collector = Self {
             start_time: Instant::now(),
             frame_drops: 0,
             encoding_errors: 0,
@@ -54,8 +126,13 @@ impl MetricsCollector {
             memory_samples: Vec::new(),
             peak_memory: 0,
             system_info,
-        })
+            debug_level,
+            debug_log: None,
+        };
+
+        Ok(collector)
     }
+
 
     pub fn record_frame_drop(&mut self) {
         self.frame_drops += 1;

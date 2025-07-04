@@ -20,6 +20,7 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
   const [stopRecordingKey, setStopRecordingKey] = useState('f5');
   const [apiToken, setApiToken] = useState('');
   const [deleteUploadedFiles, setDeleteUploadedFiles] = useState(false);
+  const [debugLevel, setDebugLevel] = useState('none');
   
   // Define the button styles directly in the component for reliability
   const buttonStyle = {
@@ -72,6 +73,7 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
     if (prefs.stopRecordingKey) setStopRecordingKey(prefs.stopRecordingKey);
     if (prefs.apiToken) setApiToken(prefs.apiToken);
     if (prefs.deleteUploadedFiles !== undefined) setDeleteUploadedFiles(prefs.deleteUploadedFiles);
+    if (prefs.debugLevel) setDebugLevel(prefs.debugLevel);
     
     // Always load user info after preferences
     loadUserInfo();
@@ -112,7 +114,8 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
       startRecordingKey,
       stopRecordingKey,
       apiToken,
-      deleteUploadedFiles
+      deleteUploadedFiles,
+      debugLevel
     });
     
     // After saving preferences, automatically start the Python bridges
@@ -246,6 +249,37 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Debug Settings */}
+        <div className="bg-[#13151a] rounded-lg border border-[#2a2d35] p-4">
+          <h3 className="mb-4 text-sm font-medium text-white select-none">Debug Settings</h3>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="debugLevel" className="text-sm text-white select-none">GStreamer Debug Level</Label>
+              <select
+                id="debugLevel"
+                value={debugLevel}
+                onChange={(e) => setDebugLevel(e.target.value)}
+                className="w-full bg-[#0c0c0f] border border-[#2a2d35] text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#42e2f5] focus:border-transparent"
+              >
+                <option value="none">None - No debug output</option>
+                <option value="error">Error - Critical errors only</option>
+                <option value="warning">Warning - Errors and warnings</option>
+                <option value="fixme">Fixme - Issues that need attention</option>
+                <option value="info">Info - General information</option>
+                <option value="debug">Debug - Detailed debugging</option>
+                <option value="log">Log - Verbose logging</option>
+                <option value="trace">Trace - Function call tracing</option>
+                <option value="memdump">Memdump - Memory dumps (very verbose)</option>
+              </select>
+              <p className="text-xs text-gray-400">
+                Controls the level of GStreamer debug information saved to log files. 
+                Higher levels provide more detail but may impact performance. 
+                Use "Info" or "Debug" for troubleshooting encoding issues.
+              </p>
             </div>
           </div>
         </div>

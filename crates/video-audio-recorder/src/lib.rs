@@ -15,7 +15,7 @@ use tokio::sync::mpsc;
 pub use gstreamer;
 
 pub mod metrics;
-pub use metrics::{MetricsCollector, PerformanceMetrics, SystemInfo};
+pub use metrics::{MetricsCollector, PerformanceMetrics, SystemInfo, DebugLevel};
 
 #[derive(Debug, Clone)]
 pub enum MetricsEvent {
