@@ -109,7 +109,7 @@ impl MetricsCollector {
                 DebugLevel::None => gstreamer::DebugLevel::None,
             };
             
-            gstreamer::debug_set_default_threshold(gst_level);
+            gstreamer::debug_set_threshold_for_name(None, gst_level);
             
             // Direct GStreamer debug output to log file
             if let Some(log_path) = debug_log_path {
