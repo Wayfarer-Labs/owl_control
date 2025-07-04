@@ -109,7 +109,18 @@ impl MetricsCollector {
                 DebugLevel::None => gstreamer::DebugLevel::None,
             };
             
-            std::env::set_var("GST_DEBUG", format!("*:{}", gst_level as u32));
+            let level_num = match debug_level {
+                DebugLevel::None => 0,
+                DebugLevel::Error => 1,
+                DebugLevel::Warning => 2,
+                DebugLevel::Fixme => 3,
+                DebugLevel::Info => 4,
+                DebugLevel::Debug => 5,
+                DebugLevel::Log => 6,
+                DebugLevel::Trace => 7,
+                DebugLevel::Memdump => 9,
+            };
+            std::env::set_var("GST_DEBUG", format!("*:{}", level_num));
             
             // Direct GStreamer debug output to log file
             if let Some(log_path) = debug_log_path {
