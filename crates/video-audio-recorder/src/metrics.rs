@@ -404,7 +404,12 @@ impl SystemInfo {
     fn get_gpu_memory_alternative() -> Option<u64> {
         use std::process::Command;
         
-        // Try using wmic with different query for dedicated video memory
+        // First try PowerShell method for more accurate results
+        if let Some(memory) = Self::get_gpu_memory_powershell() {
+            return Some(memory);
+        }
+        
+        // Fallback to wmic with different query
         let output = Command::new("wmic")
             .args(&["path", "win32_VideoController", "get", "AdapterRAM,VideoMemoryType", "/value"])
             .output()
@@ -417,6 +422,51 @@ impl SystemInfo {
         for line in output_str.lines() {
             if line.starts_with("AdapterRAM=") {
                 if let Ok(ram_bytes) = line.split('=').nth(1).unwrap_or("0").trim().parse::<u64>() {
+                    let ram_mb = ram_bytes / (1024 * 1024);
+                    if ram_mb > max_memory {
+                        max_memory = ram_mb;
+                    }
+                }
+            }
+        }
+        
+        if max_memory > 0 {
+            Some(max_memory)
+        } else {
+            None
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    fn get_gpu_memory_powershell() -> Option<u64> {
+        use std::process::Command;
+        
+        // Use PowerShell to get GPU memory via CIM (more reliable than wmic)
+        let script = r#"
+        Get-CimInstance -ClassName Win32_VideoController | 
+        Where-Object { $_.AdapterRAM -gt 0 } | 
+        ForEach-Object { 
+            "$($_.Name):$($_.AdapterRAM)" 
+        }
+        "#;
+        
+        let output = Command::new("powershell")
+            .args(&["-Command", script])
+            .output()
+            .ok()?;
+        
+        let output_str = String::from_utf8_lossy(&output.stdout);
+        let mut max_memory = 0u64;
+        
+        for line in output_str.lines() {
+            if let Some((name, ram_str)) = line.split_once(':') {
+                // Skip integrated graphics (Intel, AMD APU, etc.)
+                if name.to_lowercase().contains("intel") && 
+                   (name.to_lowercase().contains("hd") || name.to_lowercase().contains("uhd") || name.to_lowercase().contains("iris")) {
+                    continue;
+                }
+                
+                if let Ok(ram_bytes) = ram_str.trim().parse::<u64>() {
                     let ram_mb = ram_bytes / (1024 * 1024);
                     if ram_mb > max_memory {
                         max_memory = ram_mb;
