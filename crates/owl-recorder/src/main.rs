@@ -120,12 +120,12 @@ async fn main() -> Result<()> {
             },
             _ = perform_checks.tick() => {
                 if let Some(recording) = recorder.recording_mut() {
-                    // TEMPORARILY DISABLED: Handle any pending metrics events from GStreamer
-                    // while let Some(event) = recording.try_recv_metrics_event() {
-                    //     recording.handle_metrics_event(event);
-                    // }
+                    // Handle any pending metrics events from GStreamer
+                    while let Some(event) = recording.try_recv_metrics_event() {
+                        recording.handle_metrics_event(event);
+                    }
 
-                    // TEMPORARILY DISABLED: Sample system resources for performance metrics
+                    // TEMPORARILY DISABLED: Sample system resources for performance metrics (blocking issue)
                     // if let Err(e) = recording.sample_system_resources() {
                     //     tracing::warn!("Failed to sample system resources: {}", e);
                     // }
