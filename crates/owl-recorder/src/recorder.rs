@@ -113,13 +113,18 @@ where
     }
 
     pub(crate) async fn stop(&mut self) -> Result<()> {
+        tracing::debug!("Recorder::stop() called");
         let Some(recording) = self.recording.take() else {
+            tracing::debug!("No recording to stop");
             return Ok(());
         };
 
+        tracing::debug!("Showing stop notification");
         Self::show_stop_notification(recording.game_exe());
 
+        tracing::debug!("Calling recording.stop()");
         recording.stop().await?;
+        tracing::debug!("Recording.stop() completed");
 
         Ok(())
     }

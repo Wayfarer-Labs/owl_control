@@ -102,6 +102,7 @@ async fn main() -> Result<()> {
                 let e = e.expect("raw input reader was closed early");
                 recorder.seen_input(e).await?;
                 if let Some(key) = keycode_from_event(&e) {
+                    tracing::debug!("Key pressed: {} (start_key: {}, stop_key: {})", key, start_key, stop_key);
                     if key == start_key {
                         tracing::info!("Start key pressed, starting recording");
                         recorder.start().await?;
@@ -119,15 +120,15 @@ async fn main() -> Result<()> {
             },
             _ = perform_checks.tick() => {
                 if let Some(recording) = recorder.recording_mut() {
-                    // Handle any pending metrics events from GStreamer
-                    while let Some(event) = recording.try_recv_metrics_event() {
-                        recording.handle_metrics_event(event);
-                    }
+                    // TEMPORARILY DISABLED: Handle any pending metrics events from GStreamer
+                    // while let Some(event) = recording.try_recv_metrics_event() {
+                    //     recording.handle_metrics_event(event);
+                    // }
 
-                    // Sample system resources for performance metrics
-                    if let Err(e) = recording.sample_system_resources() {
-                        tracing::warn!("Failed to sample system resources: {}", e);
-                    }
+                    // TEMPORARILY DISABLED: Sample system resources for performance metrics
+                    // if let Err(e) = recording.sample_system_resources() {
+                    //     tracing::warn!("Failed to sample system resources: {}", e);
+                    // }
 
                     if !does_process_exist(recording.pid())? {
                         tracing::info!(pid=recording.pid().0, "Game process no longer exists, stopping recording");

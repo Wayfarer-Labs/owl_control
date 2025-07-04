@@ -164,13 +164,18 @@ impl Recording {
     }
 
     pub(crate) async fn stop(self) -> Result<()> {
+        tracing::debug!("Recording::stop() called");
         #[cfg(feature = "real-video")]
         {
+            tracing::debug!("Dropping metrics receiver");
             // Close the metrics receiver to signal we're done collecting metrics
             drop(self.metrics_rx);
 
+            tracing::debug!("Calling window_recorder.stop_recording()");
             self.window_recorder.stop_recording();
+            tracing::debug!("Awaiting window_recorder_listener");
             self.window_recorder_listener.await.unwrap()?;
+            tracing::debug!("window_recorder_listener completed");
 
             // Try to save performance metrics, but don't fail the recording if this fails
             let file_size = self.window_recorder.get_file_size();
