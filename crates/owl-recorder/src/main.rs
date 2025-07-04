@@ -48,7 +48,7 @@ struct Args {
 const MAX_IDLE_DURATION: Duration = Duration::from_secs(30);
 const MAX_RECORDING_DURATION: Duration = Duration::from_secs(60 * 10);
 
-`#[tokio::main]
+#[tokio::main]
 async fn main() -> Result<()> {
     color_eyre::install()?;
     tracing_subscriber::fmt::init();
