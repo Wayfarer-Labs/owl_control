@@ -27,7 +27,6 @@ pub struct SystemInfo {
     pub gpu_memory_mb: Option<u64>,
     pub gpu_driver_version: Option<String>,
     pub gstreamer_version: String,
-    pub rust_version: String,
 }
 
 #[derive(Debug)]
@@ -204,7 +203,6 @@ impl SystemInfo {
         let total_memory_mb = Self::get_total_memory_mb()?;
         let (gpu_name, gpu_memory_mb, gpu_driver_version) = Self::get_gpu_info();
         let gstreamer_version = gstreamer::version_string().to_string();
-        let rust_version = env!("RUSTC_VERSION", "unknown").to_string();
         
         Ok(Self {
             os,
@@ -216,8 +214,7 @@ impl SystemInfo {
             gpu_name,
             gpu_memory_mb,
             gpu_driver_version,
-            gstreamer_version,
-            rust_version,
+            gstreamer_version
         })
     }
 
