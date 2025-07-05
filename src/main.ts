@@ -560,11 +560,12 @@ app.on('ready', () => {
   if (isAuthenticated()) {
     const startKey = secureStore.preferences.startRecordingKey || 'f4';
     const stopKey = secureStore.preferences.stopRecordingKey || 'f5';
+    const debugLevel = secureStore.preferences.debugLevel || false;
     const apiToken = secureStore.credentials.apiKey || '';
     const deleteUploadedFiles = secureStore.preferences.deleteUploadedFiles || false;
 
     // Start the recording bridge
-    startRecordingBridge(startKey, stopKey);
+    startRecordingBridge(startKey, stopKey, debugLevel);
 
     // Start the upload bridge
     startUploadBridge(apiToken, deleteUploadedFiles);
