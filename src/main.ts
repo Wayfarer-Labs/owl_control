@@ -447,7 +447,7 @@ function updateTrayMenu() {
 // Start Python bridges after authentication
 
 // Start Python recording bridge
-function startRecordingBridge(startKey: string, stopKey: string) {
+function startRecordingBridge(startKey: string, stopKey: string, debugLevel?: string) {
   try {
     // Stop existing process if running
     if (pythonProcess) {
@@ -464,6 +464,7 @@ function startRecordingBridge(startKey: string, stopKey: string) {
       '--start-key', startKey,
       '--stop-key', stopKey,
       ...GAME_LIST.flatMap(game => ['--games', game]),
+      ...(debugLevel ? ['--debug-level', debugLevel] : []),
     ], {
       cwd: rootDir(),
       env: {
@@ -559,11 +560,12 @@ app.on('ready', () => {
   if (isAuthenticated()) {
     const startKey = secureStore.preferences.startRecordingKey || 'f4';
     const stopKey = secureStore.preferences.stopRecordingKey || 'f5';
+    const debugLevel = secureStore.preferences.debugLevel || false;
     const apiToken = secureStore.credentials.apiKey || '';
     const deleteUploadedFiles = secureStore.preferences.deleteUploadedFiles || false;
 
     // Start the recording bridge
-    startRecordingBridge(startKey, stopKey);
+    startRecordingBridge(startKey, stopKey, debugLevel);
 
     // Start the upload bridge
     startUploadBridge(apiToken, deleteUploadedFiles);
@@ -675,9 +677,10 @@ function setupIpcHandlers() {
         const stopKey = secureStore.preferences.stopRecordingKey || 'f5';
         const apiToken = secureStore.credentials.apiKey || '';
         const deleteUploadedFiles = secureStore.preferences.deleteUploadedFiles || false;
+        const debugLevel = secureStore.preferences.debugLevel;
 
         // Restart the recording bridge
-        startRecordingBridge(startKey, stopKey);
+        startRecordingBridge(startKey, stopKey, debugLevel);
 
         // Restart the upload bridge
         startUploadBridge(apiToken, deleteUploadedFiles);
@@ -701,8 +704,8 @@ function setupIpcHandlers() {
   });
 
   // Start recording bridge
-  ipcMain.handle('start-recording-bridge', async (_, startKey: string, stopKey: string) => {
-    return startRecordingBridge(startKey, stopKey);
+  ipcMain.handle('start-recording-bridge', async (_, startKey: string, stopKey: string, debugLevel?: string) => {
+    return startRecordingBridge(startKey, stopKey, debugLevel);
   });
 
   // Start upload bridge

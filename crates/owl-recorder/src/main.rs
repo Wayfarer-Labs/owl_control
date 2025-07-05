@@ -43,12 +43,15 @@ struct Args {
 
     #[arg(long, default_value = "F5")]
     stop_key: String,
+
+    #[arg(long)]
+    debug_level: Option<String>,
 }
 
 const MAX_IDLE_DURATION: Duration = Duration::from_secs(30);
 const MAX_RECORDING_DURATION: Duration = Duration::from_secs(60 * 10);
 
-`#[tokio::main]
+#[tokio::main]
 async fn main() -> Result<()> {
     color_eyre::install()?;
     tracing_subscriber::fmt::init();
@@ -60,6 +63,7 @@ async fn main() -> Result<()> {
         games,
         start_key,
         stop_key,
+        debug_level,
     } = Args::parse();
 
     let games = games.into_iter().map(Game::new).collect();
@@ -80,6 +84,7 @@ async fn main() -> Result<()> {
             )
         },
         games,
+        debug_level,
     );
 
     let mut input_rx = listen_for_raw_inputs();
@@ -91,6 +96,9 @@ async fn main() -> Result<()> {
 
     let mut perform_checks = tokio::time::interval(Duration::from_secs(1));
     perform_checks.set_missed_tick_behavior(MissedTickBehavior::Delay);
+    
+    let mut system_resource_timer = tokio::time::interval(Duration::from_secs(10));
+    system_resource_timer.set_missed_tick_behavior(MissedTickBehavior::Delay);
 
     loop {
         tokio::select! {
@@ -102,6 +110,7 @@ async fn main() -> Result<()> {
                 let e = e.expect("raw input reader was closed early");
                 recorder.seen_input(e).await?;
                 if let Some(key) = keycode_from_event(&e) {
+                    tracing::debug!("Key pressed: {} (start_key: {}, stop_key: {})", key, start_key, stop_key);
                     if key == start_key {
                         tracing::info!("Start key pressed, starting recording");
                         recorder.start().await?;
@@ -118,7 +127,13 @@ async fn main() -> Result<()> {
                 idleness_tracker.update_activity();
             },
             _ = perform_checks.tick() => {
-                if let Some(recording) = recorder.recording() {
+                if let Some(recording) = recorder.recording_mut() {
+                    // Handle any pending metrics events from GStreamer
+                    while let Some(event) = recording.try_recv_metrics_event() {
+                        recording.handle_metrics_event(event);
+                    }
+
+
                     if !does_process_exist(recording.pid())? {
                         tracing::info!(pid=recording.pid().0, "Game process no longer exists, stopping recording");
                         recorder.stop().await?;
@@ -132,6 +147,14 @@ async fn main() -> Result<()> {
                         recorder.start().await?;
                         idleness_tracker.update_activity();
                     };
+                }
+            },
+            _ = system_resource_timer.tick() => {
+                if let Some(recording) = recorder.recording_mut() {
+                    // Sample system resources less frequently to avoid blocking
+                    if let Err(e) = recording.sample_system_resources() {
+                        tracing::warn!("Failed to sample system resources: {}", e);
+                    }
                 }
             },
         }

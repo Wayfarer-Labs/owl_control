@@ -10,8 +10,19 @@ use gstreamer::{
     glib::object::Cast,
     prelude::{ElementExt as _, ElementExtManual as _, GObjectExtManualGst as _, GstBinExt as _},
 };
+use tokio::sync::mpsc;
 
 pub use gstreamer;
+
+pub mod metrics;
+pub use metrics::{MetricsCollector, PerformanceMetrics, SystemInfo};
+
+#[derive(Debug, Clone)]
+pub enum MetricsEvent {
+    FrameDrop,
+    EncodingError,
+    PipelineStateChange,
+}
 
 fn create_pipeline(path: &Path, _pid: u32, hwnd: usize) -> Result<Pipeline> {
     // Loopback is bugged: gstreamer/gstreamer#4259
@@ -61,21 +72,32 @@ impl Drop for NullPipelineOnDrop {
 
 pub struct WindowRecorder {
     pipeline: NullPipelineOnDrop,
+    recording_path: std::path::PathBuf,
+    metrics_tx: mpsc::UnboundedSender<MetricsEvent>,
 }
 
 impl WindowRecorder {
-    pub fn start_recording(path: &Path, pid: u32, hwnd: usize) -> Result<WindowRecorder> {
+    pub fn start_recording(path: &Path, pid: u32, hwnd: usize) -> Result<(WindowRecorder, mpsc::UnboundedReceiver<MetricsEvent>)> {
         let pipeline = create_pipeline(path, pid, hwnd)?;
+        let (metrics_tx, metrics_rx) = mpsc::unbounded_channel();
+
         pipeline
             .set_state(gstreamer::State::Playing)
             .wrap_err("failed to set pipeline state to Playing")?;
-        Ok(WindowRecorder {
+
+        let recorder = WindowRecorder {
             pipeline: pipeline.into(),
-        })
+            recording_path: path.to_path_buf(),
+            metrics_tx,
+        };
+
+        Ok((recorder, metrics_rx))
     }
 
     pub fn listen_to_messages(&self) -> impl Future<Output = Result<()>> + use<> {
         let bus = self.pipeline.bus().unwrap();
+        let metrics_tx = self.metrics_tx.clone();
+
         async move {
             while let Some(msg) = bus.stream().next().await {
                 use gstreamer::MessageView;
@@ -86,7 +108,19 @@ impl WindowRecorder {
                         break;
                     }
                     MessageView::Error(err) => {
+                        let _ = metrics_tx.send(MetricsEvent::EncodingError);
                         return Err(eyre!(err.error()).wrap_err("Received error message from bus"));
+                    }
+                    MessageView::StateChanged(_) => {
+                        let _ = metrics_tx.send(MetricsEvent::PipelineStateChange);
+                    }
+                    MessageView::Qos(_) => {
+                        // QoS messages indicate quality issues, record as potential frame drops
+                        let _ = metrics_tx.send(MetricsEvent::FrameDrop);
+                        tracing::warn!("QoS message received - potential performance issue");
+                    }
+                    MessageView::Warning(warning) => {
+                        tracing::warn!("GStreamer warning: {}", warning.error());
                     }
                     _ => (),
                 };
@@ -99,5 +133,11 @@ impl WindowRecorder {
         tracing::debug!("Sending EOS event to pipeline");
         self.pipeline.send_event(gstreamer::event::Eos::new());
         tracing::debug!("Sent EOS event to pipeline");
+    }
+
+    pub fn get_file_size(&self) -> u64 {
+        std::fs::metadata(&self.recording_path)
+            .map(|m| m.len())
+            .unwrap_or(0)
     }
 }

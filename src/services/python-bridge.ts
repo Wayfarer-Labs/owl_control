@@ -8,6 +8,7 @@ export interface AppPreferences {
   stopRecordingKey?: string;
   apiToken?: string;
   deleteUploadedFiles?: boolean;
+  debugLevel?: string;
 }
 
 /**
@@ -18,7 +19,8 @@ export class PythonBridge {
     startRecordingKey: 'f4',
     stopRecordingKey: 'f5',
     apiToken: '',
-    deleteUploadedFiles: false
+    deleteUploadedFiles: false,
+    debugLevel: undefined
   };
 
   constructor() {
@@ -45,6 +47,7 @@ export class PythonBridge {
             if (!this.preferences.stopRecordingKey) {
               this.preferences.stopRecordingKey = 'f5';
             }
+            // debugLevel can be undefined (logging disabled)
           }
         })
         .catch(error => {
@@ -75,6 +78,7 @@ export class PythonBridge {
     if (!this.preferences.stopRecordingKey) {
       this.preferences.stopRecordingKey = 'f5';
     }
+    // debugLevel can be undefined (logging disabled)
     
     return this.preferences;
   }
@@ -112,7 +116,11 @@ export class PythonBridge {
   public async startRecordingBridge(): Promise<boolean> {
     try {
       // Call Electron service to start Python recording bridge process
-      return await ElectronService.startRecordingBridge(this.preferences.startRecordingKey, this.preferences.stopRecordingKey);
+      return await ElectronService.startRecordingBridge(
+        this.preferences.startRecordingKey, 
+        this.preferences.stopRecordingKey,
+        this.preferences.debugLevel
+      );
     } catch (error) {
       console.error('Error starting recording bridge:', error);
       return false;

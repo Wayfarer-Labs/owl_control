@@ -20,6 +20,8 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
   const [stopRecordingKey, setStopRecordingKey] = useState('f5');
   const [apiToken, setApiToken] = useState('');
   const [deleteUploadedFiles, setDeleteUploadedFiles] = useState(false);
+  const [gstreamerLoggingEnabled, setGstreamerLoggingEnabled] = useState(false);
+  const [debugLevel, setDebugLevel] = useState('*:3');
   
   // Define the button styles directly in the component for reliability
   const buttonStyle = {
@@ -72,6 +74,15 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
     if (prefs.stopRecordingKey) setStopRecordingKey(prefs.stopRecordingKey);
     if (prefs.apiToken) setApiToken(prefs.apiToken);
     if (prefs.deleteUploadedFiles !== undefined) setDeleteUploadedFiles(prefs.deleteUploadedFiles);
+    if (prefs.debugLevel) {
+      if (prefs.debugLevel && prefs.debugLevel !== 'none' && prefs.debugLevel !== '') {
+        setGstreamerLoggingEnabled(true);
+        setDebugLevel(prefs.debugLevel);
+      } else {
+        setGstreamerLoggingEnabled(false);
+        setDebugLevel('*:3');
+      }
+    }
     
     // Always load user info after preferences
     loadUserInfo();
@@ -112,7 +123,8 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
       startRecordingKey,
       stopRecordingKey,
       apiToken,
-      deleteUploadedFiles
+      deleteUploadedFiles,
+      debugLevel: gstreamerLoggingEnabled ? debugLevel : undefined
     });
     
     // After saving preferences, automatically start the Python bridges
@@ -246,6 +258,57 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Debug Settings */}
+        <div className="bg-[#13151a] rounded-lg border border-[#2a2d35] p-4">
+          <h3 className="mb-4 text-sm font-medium text-white select-none">Debug Settings</h3>
+          <div className="space-y-4">
+            <div className="grid grid-cols-[1fr,1fr] gap-4 items-center">
+              <Label className="text-sm text-white select-none">Enable GStreamer Logging</Label>
+              <div className="flex items-center">
+                <div 
+                  className="relative flex items-center select-none cursor-pointer" 
+                  onClick={() => setGstreamerLoggingEnabled(!gstreamerLoggingEnabled)}
+                >
+                  <div 
+                    className={`w-5 h-5 mr-2 border rounded flex items-center justify-center ${
+                      gstreamerLoggingEnabled 
+                        ? 'bg-[#1a73e8] border-[#1a73e8]' 
+                        : 'bg-[#0c0c0f] border-[#2a2d35]'
+                    }`}
+                  >
+                    {gstreamerLoggingEnabled && (
+                      <Check className="h-3.5 w-3.5 text-white" />
+                    )}
+                  </div>
+                  <span className="text-white select-none">
+                    Enable debug logging
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="debugLevel" className="text-sm text-white select-none">Debug Level String</Label>
+              <Input
+                id="debugLevel"
+                value={debugLevel}
+                onChange={(e) => setDebugLevel(e.target.value)}
+                disabled={!gstreamerLoggingEnabled}
+                placeholder="*:3"
+                className={`bg-[#0c0c0f] border-[#2a2d35] text-white ${
+                  !gstreamerLoggingEnabled ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              />
+              <p className="text-xs text-gray-400">
+                GStreamer debug format string. Examples: "*:3" (all categories at level 3), 
+                "audiotestsrc:6,*:2" (audiotestsrc at level 6, others at level 2), 
+                "audio*:5" (all audio categories at level 5). 
+                Levels: 0=None, 1=Error, 2=Warning, 3=Fixme, 4=Info, 5=Debug, 6=Log, 7=Trace, 9=Memdump.
+              </p>
             </div>
           </div>
         </div>
