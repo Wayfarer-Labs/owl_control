@@ -23,7 +23,7 @@ const GAME_LIST = [
   'MCC-Win64-Shipping',
   'farcry3', 'fc3', 'farcry4', 'farcry5', 'fc3_blooddragon',
   'Cyberpunk2077',
-  'Frog_Detective',
+  'Frog_Detective', 'Frog_Detective_2', 'Frog_Detective_3', 'The_Haunted_Island',
 ]
 
 // Secure store for credentials and preferences
