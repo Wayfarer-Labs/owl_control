@@ -1,10 +1,73 @@
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use std::fs::OpenOptions;
 use std::io::{Write, BufWriter};
+use std::sync::{Arc, Mutex};
+use std::path::Path;
 use serde::{Deserialize, Serialize};
+use gstreamer::glib;
+use chrono;
 
 // Debug level is now handled as a GST_DEBUG format string
 // Examples: "*:3", "audiotestsrc:6,*:2", "audio*:5"
+
+// Global log writer for GStreamer logs
+static GST_LOG_WRITER: std::sync::OnceLock<Arc<Mutex<Option<BufWriter<std::fs::File>>>>> = std::sync::OnceLock::new();
+
+// Initialize the global log writer
+fn init_gst_log_writer() {
+    GST_LOG_WRITER.set(Arc::new(Mutex::new(None))).ok();
+}
+
+// Set the log file for GStreamer output
+pub fn set_gst_log_file(log_path: &Path) -> color_eyre::Result<()> {
+    let writer = GST_LOG_WRITER.get_or_init(|| Arc::new(Mutex::new(None)));
+    
+    let file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(log_path)?;
+    
+    let mut writer_guard = writer.lock().unwrap();
+    *writer_guard = Some(BufWriter::new(file));
+    
+    Ok(())
+}
+
+// Custom GStreamer log function
+fn gst_log_function(
+    category: gstreamer::DebugCategory,
+    level: gstreamer::DebugLevel,
+    file: &glib::GStr,
+    function: &glib::GStr,
+    line: u32,
+    object: Option<&gstreamer::LoggedObject>,
+    message: &gstreamer::DebugMessage,
+) {
+    if let Some(writer_arc) = GST_LOG_WRITER.get() {
+        if let Ok(mut writer_guard) = writer_arc.lock() {
+            if let Some(ref mut writer) = *writer_guard {
+                let timestamp = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or_default();
+                let timestamp_str = chrono::DateTime::<chrono::Utc>::from(SystemTime::now())
+                    .format("%Y-%m-%dT%H:%M:%S%.6fZ")
+                    .to_string();
+                
+                let file_str = file.as_str();
+                let func_str = function.as_str();
+                let msg_str = message.get().map(|s| s.as_str().to_string()).unwrap_or_default();
+                
+                let log_line = format!(
+                    "{} {:?} {}: {} ({}:{}:{})\n",
+                    timestamp_str, level, category.name(), msg_str, file_str, func_str, line
+                );
+                
+                let _ = writer.write_all(log_line.as_bytes());
+                let _ = writer.flush();
+            }
+        }
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PerformanceMetrics {
@@ -51,10 +114,16 @@ impl MetricsCollector {
     pub fn new(debug_level: Option<String>) -> color_eyre::Result<Self> {
         let system_info = SystemInfo::collect()?;
         
+        // Initialize global log writer if not already done
+        init_gst_log_writer();
+        
         // Configure GStreamer debug output
         if let Some(ref debug_str) = debug_level {
             if !debug_str.is_empty() && debug_str != "0" && debug_str != "*:0" {
                 gstreamer::log::set_threshold_from_string(debug_str, true);
+                
+                // Set up custom log function to capture GStreamer logs
+                gstreamer::log::add_log_function(gst_log_function);
             }
         }
 

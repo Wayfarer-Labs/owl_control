@@ -54,7 +54,6 @@ const MAX_RECORDING_DURATION: Duration = Duration::from_secs(60 * 10);
 #[tokio::main]
 async fn main() -> Result<()> {
     color_eyre::install()?;
-    tracing_subscriber::fmt::init();
     #[cfg(feature = "real-video")]
     gstreamer::init()?;
 
@@ -65,6 +64,12 @@ async fn main() -> Result<()> {
         stop_key,
         debug_level,
     } = Args::parse();
+    
+    // Set up console logging (file logging will be per-recording session)
+    // Disable ANSI colors when stdout is not a terminal (e.g., when redirected to a file)
+    tracing_subscriber::fmt()
+        .with_ansi(atty::is(atty::Stream::Stdout))
+        .init();
 
     let games = games.into_iter().map(Game::new).collect();
 
@@ -84,7 +89,7 @@ async fn main() -> Result<()> {
             )
         },
         games,
-        debug_level,
+        debug_level.clone(),
     );
 
     let mut input_rx = listen_for_raw_inputs();
@@ -209,3 +214,4 @@ fn wait_for_ctrl_c() -> oneshot::Receiver<()> {
     });
     ctrl_c_rx
 }
+

@@ -1,6 +1,8 @@
 use std::{
     path::{Path, PathBuf},
     time::{Instant, SystemTime, UNIX_EPOCH},
+    fs::OpenOptions,
+    io,
 };
 
 use color_eyre::Result;
@@ -68,6 +70,17 @@ impl Recording {
         let start_instant = Instant::now();
 
         #[cfg(feature = "real-video")]
+        let debug_log_file = if debug_level.is_some() {
+            let debug_log_path = video_path.with_extension("debug.log");
+            redirect_stdout_stderr_to_file(&debug_log_path)?;
+            
+            // Also set up GStreamer to log to the same file
+            video_audio_recorder::set_gst_log_file(&debug_log_path)?;
+            
+            Some(debug_log_path)
+        } else {
+            None
+        };
         let metrics_collector = MetricsCollector::new(debug_level)?;
         #[cfg(feature = "real-video")]
         let (window_recorder, metrics_rx) =
@@ -257,4 +270,54 @@ struct Metadata {
     start_timestamp: u64,
     end_timestamp: u64,
     duration: f32,
+}
+
+#[cfg(target_os = "windows")]
+fn redirect_stdout_stderr_to_file(log_path: &Path) -> Result<()> {
+    use std::os::windows::io::AsRawHandle;
+    use windows::Win32::System::Console::{SetStdHandle, STD_ERROR_HANDLE, STD_OUTPUT_HANDLE};
+    use windows::Win32::Foundation::HANDLE;
+    
+    let file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(log_path)?;
+    
+    let handle = HANDLE(file.as_raw_handle() as *mut std::ffi::c_void);
+    
+    unsafe {
+        SetStdHandle(STD_OUTPUT_HANDLE, handle)?;
+        SetStdHandle(STD_ERROR_HANDLE, handle)?;
+    }
+    
+    // Don't close the file handle here - it needs to stay open for stdout/stderr
+    std::mem::forget(file);
+    
+    tracing::info!("Redirected stdout/stderr to {}", log_path.display());
+    
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+fn redirect_stdout_stderr_to_file(log_path: &Path) -> Result<()> {
+    use std::os::unix::io::AsRawFd;
+    
+    let file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(log_path)?;
+    
+    let fd = file.as_raw_fd();
+    
+    unsafe {
+        libc::dup2(fd, libc::STDOUT_FILENO);
+        libc::dup2(fd, libc::STDERR_FILENO);
+    }
+    
+    // Don't close the file handle here - it needs to stay open for stdout/stderr
+    std::mem::forget(file);
+    
+    tracing::info!("Redirected stdout/stderr to {}", log_path.display());
+    
+    Ok(())
 }
