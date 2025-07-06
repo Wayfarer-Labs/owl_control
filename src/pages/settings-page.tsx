@@ -21,7 +21,7 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
   const [apiToken, setApiToken] = useState('');
   const [deleteUploadedFiles, setDeleteUploadedFiles] = useState(false);
   const [gstreamerLoggingEnabled, setGstreamerLoggingEnabled] = useState(false);
-  const [debugLevel, setDebugLevel] = useState('*:3');
+  const [debugLevel, setDebugLevel] = useState('4,GST_*:2,task:2,base*:2,aggregator:2,structure:2,ringbuffer:2,structure:2,audio*:2');
   
   // Define the button styles directly in the component for reliability
   const buttonStyle = {
@@ -80,7 +80,7 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
         setDebugLevel(prefs.debugLevel);
       } else {
         setGstreamerLoggingEnabled(false);
-        setDebugLevel('*:3');
+        setDebugLevel('4,GST_*:2,task:2,base*:2,aggregator:2,structure:2,ringbuffer:2,structure:2,audio*:2');
       }
     }
     
@@ -298,7 +298,7 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
                 value={debugLevel}
                 onChange={(e) => setDebugLevel(e.target.value)}
                 disabled={!gstreamerLoggingEnabled}
-                placeholder="*:3"
+                placeholder="4,GST_*:2,task:2,base*:2,aggregator:2,structure:2,ringbuffer:2,structure:2,audio*:2"
                 className={`bg-[#0c0c0f] border-[#2a2d35] text-white ${
                   !gstreamerLoggingEnabled ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
