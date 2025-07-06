@@ -46,6 +46,15 @@ struct Args {
 
     #[arg(long)]
     debug_level: Option<String>,
+
+    #[arg(long)]
+    save_debug_log: bool,
+
+    #[arg(long)]
+    gstreamer_logging_enabled: bool,
+
+    #[arg(long)]
+    gstreamer_tracing_enabled: bool,
 }
 
 const MAX_IDLE_DURATION: Duration = Duration::from_secs(30);
@@ -63,6 +72,9 @@ async fn main() -> Result<()> {
         start_key,
         stop_key,
         debug_level,
+        save_debug_log,
+        gstreamer_logging_enabled,
+        gstreamer_tracing_enabled,
     } = Args::parse();
     
     // Set up console logging (file logging will be per-recording session)
@@ -90,6 +102,9 @@ async fn main() -> Result<()> {
         },
         games,
         debug_level.clone(),
+        save_debug_log,
+        gstreamer_logging_enabled,
+        gstreamer_tracing_enabled,
     );
 
     let mut input_rx = listen_for_raw_inputs();

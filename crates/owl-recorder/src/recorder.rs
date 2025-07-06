@@ -16,18 +16,24 @@ pub(crate) struct Recorder<D> {
     games: Vec<Game>,
     recording: Option<Recording>,
     debug_level: Option<String>,
+    save_debug_log: bool,
+    gstreamer_logging_enabled: bool,
+    gstreamer_tracing_enabled: bool,
 }
 
 impl<D> Recorder<D>
 where
     D: FnMut() -> PathBuf,
 {
-    pub(crate) fn new(recording_dir: D, games: Vec<Game>, debug_level: Option<String>) -> Self {
+    pub(crate) fn new(recording_dir: D, games: Vec<Game>, debug_level: Option<String>, save_debug_log: bool, gstreamer_logging_enabled: bool, gstreamer_tracing_enabled: bool) -> Self {
         Self {
             recording_dir,
             games,
             recording: None,
             debug_level,
+            save_debug_log,
+            gstreamer_logging_enabled,
+            gstreamer_tracing_enabled,
         }
     }
 
@@ -79,6 +85,7 @@ where
                 path: recording_location.join("inputs.csv"),
             },
             self.debug_level.clone(),
+            self.save_debug_log,
         )
         .await?;
 

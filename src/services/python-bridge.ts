@@ -8,6 +8,10 @@ export interface AppPreferences {
   stopRecordingKey?: string;
   apiToken?: string;
   deleteUploadedFiles?: boolean;
+  debugEnabled?: boolean;
+  saveDebugLog?: boolean;
+  gstreamerLoggingEnabled?: boolean;
+  gstreamerTracingEnabled?: boolean;
   debugLevel?: string;
 }
 
@@ -20,6 +24,10 @@ export class PythonBridge {
     stopRecordingKey: 'f5',
     apiToken: '',
     deleteUploadedFiles: false,
+    debugEnabled: false,
+    saveDebugLog: true,
+    gstreamerLoggingEnabled: false,
+    gstreamerTracingEnabled: false,
     debugLevel: undefined
   };
 
@@ -119,7 +127,10 @@ export class PythonBridge {
       return await ElectronService.startRecordingBridge(
         this.preferences.startRecordingKey, 
         this.preferences.stopRecordingKey,
-        this.preferences.debugLevel
+        this.preferences.debugLevel,
+        this.preferences.saveDebugLog,
+        this.preferences.gstreamerLoggingEnabled,
+        this.preferences.gstreamerTracingEnabled
       );
     } catch (error) {
       console.error('Error starting recording bridge:', error);

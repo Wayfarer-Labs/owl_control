@@ -65,12 +65,13 @@ impl Recording {
         }: WindowParameters,
         InputParameters { path: csv_path }: InputParameters,
         debug_level: Option<String>,
+        save_debug_log: bool,
     ) -> Result<Self> {
         let start_time = SystemTime::now();
         let start_instant = Instant::now();
 
         #[cfg(feature = "real-video")]
-        let debug_log_file = if debug_level.is_some() {
+        let debug_log_file = if save_debug_log {
             let debug_log_path = video_path.with_extension("debug.log");
             redirect_stdout_stderr_to_file(&debug_log_path)?;
             
