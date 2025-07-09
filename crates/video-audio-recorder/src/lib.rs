@@ -111,9 +111,6 @@ impl WindowRecorder {
                         let _ = metrics_tx.send(MetricsEvent::EncodingError);
                         return Err(eyre!(err.error()).wrap_err("Received error message from bus"));
                     }
-                    MessageView::StateChanged(_) => {
-                        let _ = metrics_tx.send(MetricsEvent::PipelineStateChange);
-                    }
                     MessageView::Qos(_) => {
                         // QoS messages indicate quality issues, record as potential frame drops
                         let _ = metrics_tx.send(MetricsEvent::FrameDrop);

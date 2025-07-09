@@ -74,7 +74,6 @@ pub struct PerformanceMetrics {
     pub recording_duration: Duration,
     pub frame_drops: u64,
     pub encoding_errors: u64,
-    pub pipeline_state_changes: u64,
     pub average_cpu_usage: f64,
     pub peak_memory_usage: u64,
     pub average_memory_usage: f64,
@@ -102,7 +101,6 @@ pub struct MetricsCollector {
     start_time: Instant,
     frame_drops: u64,
     encoding_errors: u64,
-    pipeline_state_changes: u64,
     cpu_samples: Vec<f64>,
     memory_samples: Vec<u64>,
     peak_memory: u64,
@@ -131,7 +129,6 @@ impl MetricsCollector {
             start_time: Instant::now(),
             frame_drops: 0,
             encoding_errors: 0,
-            pipeline_state_changes: 0,
             cpu_samples: Vec::new(),
             memory_samples: Vec::new(),
             peak_memory: 0,
@@ -149,10 +146,6 @@ impl MetricsCollector {
 
     pub fn record_encoding_error(&mut self) {
         self.encoding_errors += 1;
-    }
-
-    pub fn record_pipeline_state_change(&mut self) {
-        self.pipeline_state_changes += 1;
     }
 
     pub fn sample_system_resources(&mut self) -> color_eyre::Result<()> {
@@ -181,7 +174,6 @@ impl MetricsCollector {
             recording_duration,
             frame_drops: self.frame_drops,
             encoding_errors: self.encoding_errors,
-            pipeline_state_changes: self.pipeline_state_changes,
             average_cpu_usage: self.cpu_samples.iter().sum::<f64>() / self.cpu_samples.len().max(1) as f64,
             peak_memory_usage: self.peak_memory,
             average_memory_usage: self.memory_samples.iter().sum::<u64>() as f64 / self.memory_samples.len().max(1) as f64,
