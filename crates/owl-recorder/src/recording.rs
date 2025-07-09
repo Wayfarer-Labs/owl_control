@@ -162,7 +162,6 @@ impl Recording {
             match event {
                 MetricsEvent::FrameDrop => self.metrics_collector.record_frame_drop(),
                 MetricsEvent::EncodingError => self.metrics_collector.record_encoding_error(),
-                MetricsEvent::PipelineStateChange => self.metrics_collector.record_pipeline_state_change(),
             }
         }
     }
