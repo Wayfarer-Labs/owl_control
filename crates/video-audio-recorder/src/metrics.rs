@@ -183,7 +183,6 @@ impl MetricsCollector {
         }
     }
 
-    #[cfg(target_os = "windows")]
     fn get_cpu_usage(&self) -> color_eyre::Result<f64> {
         use std::process::Command;
         
@@ -202,33 +201,6 @@ impl MetricsCollector {
         Ok(0.0)
     }
 
-    #[cfg(target_os = "linux")]
-    fn get_cpu_usage(&self) -> color_eyre::Result<f64> {
-        use std::fs;
-        
-        let stat = fs::read_to_string("/proc/stat")?;
-        let first_line = stat.lines().next().unwrap_or("");
-        let fields: Vec<&str> = first_line.split_whitespace().collect();
-        
-        if fields.len() >= 8 {
-            let user: u64 = fields[1].parse().unwrap_or(0);
-            let nice: u64 = fields[2].parse().unwrap_or(0);
-            let system: u64 = fields[3].parse().unwrap_or(0);
-            let idle: u64 = fields[4].parse().unwrap_or(0);
-            let iowait: u64 = fields[5].parse().unwrap_or(0);
-            let irq: u64 = fields[6].parse().unwrap_or(0);
-            let softirq: u64 = fields[7].parse().unwrap_or(0);
-            
-            let total = user + nice + system + idle + iowait + irq + softirq;
-            let active = total - idle - iowait;
-            
-            Ok((active as f64 / total as f64) * 100.0)
-        } else {
-            Ok(0.0)
-        }
-    }
-
-    #[cfg(target_os = "windows")]
     fn get_memory_usage(&self) -> color_eyre::Result<u64> {
         use std::process::Command;
         
@@ -249,25 +221,6 @@ impl MetricsCollector {
         }
         
         Ok((total - free) * 1024) // Convert from KB to bytes
-    }
-
-    #[cfg(target_os = "linux")]
-    fn get_memory_usage(&self) -> color_eyre::Result<u64> {
-        use std::fs;
-        
-        let meminfo = fs::read_to_string("/proc/meminfo")?;
-        let mut total = 0u64;
-        let mut available = 0u64;
-        
-        for line in meminfo.lines() {
-            if line.starts_with("MemTotal:") {
-                total = line.split_whitespace().nth(1).unwrap_or("0").parse::<u64>().unwrap_or(0) * 1024;
-            } else if line.starts_with("MemAvailable:") {
-                available = line.split_whitespace().nth(1).unwrap_or("0").parse::<u64>().unwrap_or(0) * 1024;
-            }
-        }
-        
-        Ok(total - available)
     }
 }
 
@@ -296,7 +249,6 @@ impl SystemInfo {
         })
     }
 
-    #[cfg(target_os = "windows")]
     fn get_os_version() -> String {
         use std::process::Command;
         
@@ -328,35 +280,6 @@ impl SystemInfo {
         }
     }
 
-    #[cfg(target_os = "linux")]
-    fn get_os_version() -> String {
-        use std::fs;
-        
-        if let Ok(release) = fs::read_to_string("/etc/os-release") {
-            let mut name = String::new();
-            let mut version = String::new();
-            
-            for line in release.lines() {
-                if line.starts_with("NAME=") {
-                    name = line.split('=').nth(1).unwrap_or("").trim_matches('"').to_string();
-                } else if line.starts_with("VERSION=") {
-                    version = line.split('=').nth(1).unwrap_or("").trim_matches('"').to_string();
-                }
-            }
-            
-            if !name.is_empty() && !version.is_empty() {
-                format!("{} {}", name, version)
-            } else if !name.is_empty() {
-                name
-            } else {
-                "Linux (unknown distribution)".to_string()
-            }
-        } else {
-            "Linux (unknown distribution)".to_string()
-        }
-    }
-
-    #[cfg(target_os = "windows")]
     fn get_cpu_model() -> String {
         use std::process::Command;
         
@@ -382,24 +305,6 @@ impl SystemInfo {
         "Unknown CPU".to_string()
     }
 
-    #[cfg(target_os = "linux")]
-    fn get_cpu_model() -> String {
-        use std::fs;
-        
-        if let Ok(cpuinfo) = fs::read_to_string("/proc/cpuinfo") {
-            for line in cpuinfo.lines() {
-                if line.starts_with("model name") {
-                    if let Some(name) = line.split(':').nth(1) {
-                        return name.trim().to_string();
-                    }
-                }
-            }
-        }
-        
-        "Unknown CPU".to_string()
-    }
-
-    #[cfg(target_os = "windows")]
     fn get_total_memory_mb() -> color_eyre::Result<u64> {
         use std::process::Command;
         
@@ -418,22 +323,6 @@ impl SystemInfo {
         Ok(0)
     }
 
-    #[cfg(target_os = "linux")]
-    fn get_total_memory_mb() -> color_eyre::Result<u64> {
-        use std::fs;
-        
-        let meminfo = fs::read_to_string("/proc/meminfo")?;
-        for line in meminfo.lines() {
-            if line.starts_with("MemTotal:") {
-                let kb = line.split_whitespace().nth(1).unwrap_or("0").parse::<u64>().unwrap_or(0);
-                return Ok(kb / 1024);
-            }
-        }
-        
-        Ok(0)
-    }
-
-    #[cfg(target_os = "windows")]
     fn get_gpu_info() -> (Option<String>, Option<u64>, Option<String>) {
         use std::process::Command;
         
@@ -478,7 +367,6 @@ impl SystemInfo {
         (name, memory_mb, driver_version)
     }
 
-    #[cfg(target_os = "windows")]
     fn get_gpu_memory_alternative() -> Option<u64> {
         use std::process::Command;
         
@@ -515,7 +403,6 @@ impl SystemInfo {
         }
     }
 
-    #[cfg(target_os = "windows")]
     fn get_gpu_memory_powershell() -> Option<u64> {
         use std::process::Command;
         
@@ -558,107 +445,5 @@ impl SystemInfo {
         } else {
             None
         }
-    }
-
-    #[cfg(target_os = "linux")]
-    fn get_gpu_info() -> (Option<String>, Option<u64>, Option<String>) {
-        use std::process::Command;
-        
-        // Try to get GPU info from lspci
-        let name = Self::get_gpu_name_linux();
-        
-        // Try to get GPU memory from nvidia-smi if available
-        let memory_mb = Self::get_gpu_memory_linux();
-        
-        // Try to get driver version
-        let driver_version = Self::get_gpu_driver_version_linux();
-        
-        (name, memory_mb, driver_version)
-    }
-
-    #[cfg(target_os = "linux")]
-    fn get_gpu_name_linux() -> Option<String> {
-        use std::process::Command;
-        
-        let output = Command::new("lspci")
-            .args(&["-nn"])
-            .output()
-            .ok()?;
-        
-        let output_str = String::from_utf8_lossy(&output.stdout);
-        for line in output_str.lines() {
-            if line.contains("VGA compatible controller") || line.contains("3D controller") {
-                let parts: Vec<&str> = line.split(": ").collect();
-                if parts.len() >= 2 {
-                    return Some(parts[1].to_string());
-                }
-            }
-        }
-        
-        None
-    }
-
-    #[cfg(target_os = "linux")]
-    fn get_gpu_memory_linux() -> Option<u64> {
-        use std::process::Command;
-        
-        // Try nvidia-smi first
-        if let Ok(output) = Command::new("nvidia-smi")
-            .args(&["--query-gpu=memory.total", "--format=csv,noheader,nounits"])
-            .output() {
-            let output_str = String::from_utf8_lossy(&output.stdout);
-            if let Some(line) = output_str.lines().next() {
-                if let Ok(memory_mb) = line.trim().parse::<u64>() {
-                    return Some(memory_mb);
-                }
-            }
-        }
-        
-        // Try reading from /sys/class/drm for AMD/Intel GPUs
-        if let Ok(entries) = std::fs::read_dir("/sys/class/drm") {
-            for entry in entries.flatten() {
-                if let Some(name) = entry.file_name().to_str() {
-                    if name.starts_with("card") && !name.contains('-') {
-                        let mem_path = format!("/sys/class/drm/{}/device/mem_info_vram_total", name);
-                        if let Ok(content) = std::fs::read_to_string(&mem_path) {
-                            if let Ok(bytes) = content.trim().parse::<u64>() {
-                                return Some(bytes / (1024 * 1024));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        None
-    }
-
-    #[cfg(target_os = "linux")]
-    fn get_gpu_driver_version_linux() -> Option<String> {
-        use std::process::Command;
-        
-        // Try nvidia-smi for NVIDIA drivers
-        if let Ok(output) = Command::new("nvidia-smi")
-            .args(&["--query-gpu=driver_version", "--format=csv,noheader,nounits"])
-            .output() {
-            let output_str = String::from_utf8_lossy(&output.stdout);
-            if let Some(line) = output_str.lines().next() {
-                let version = line.trim();
-                if !version.is_empty() {
-                    return Some(format!("NVIDIA {}", version));
-                }
-            }
-        }
-        
-        // Try reading from /sys/module for other drivers
-        if let Ok(content) = std::fs::read_to_string("/sys/module/i915/version") {
-            return Some(format!("Intel i915 {}", content.trim()));
-        }
-        
-        if let Ok(content) = std::fs::read_to_string("/sys/module/amdgpu/version") {
-            return Some(format!("AMD {}", content.trim()));
-        }
-        
-        None
     }
 }
