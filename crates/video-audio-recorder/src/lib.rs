@@ -10,7 +10,6 @@ use gstreamer::{
     glib::object::Cast,
     prelude::{ElementExt as _, ElementExtManual as _, GObjectExtManualGst as _, GstBinExt as _},
 };
-use tokio::sync::mpsc;
 
 pub use gstreamer;
 
@@ -21,8 +20,14 @@ pub use metrics::{MetricsCollector, PerformanceMetrics, SystemInfo, set_gst_log_
 pub enum MetricsEvent {
     FrameDrop,
     EncodingError,
-    PipelineStateChange,
 }
+pub struct DebugParameters {
+    pub debug_level: Option<String>,
+    pub save_debug_log: bool,
+    pub gstreamer_logging_enabled: bool,
+    pub gstreamer_tracing_enabled: bool,
+}
+
 
 fn create_pipeline(path: &Path, _pid: u32, hwnd: usize) -> Result<Pipeline> {
     // Loopback is bugged: gstreamer/gstreamer#4259
@@ -73,13 +78,14 @@ impl Drop for NullPipelineOnDrop {
 pub struct WindowRecorder {
     pipeline: NullPipelineOnDrop,
     recording_path: std::path::PathBuf,
-    metrics_tx: mpsc::UnboundedSender<MetricsEvent>,
+    metrics_collector: MetricsCollector,
 }
 
 impl WindowRecorder {
-    pub fn start_recording(path: &Path, pid: u32, hwnd: usize) -> Result<(WindowRecorder, mpsc::UnboundedReceiver<MetricsEvent>)> {
+    pub fn start_recording(path: &Path, pid: u32, hwnd: usize, debug_params: Option<DebugParameters>) -> Result<WindowRecorder> {
         let pipeline = create_pipeline(path, pid, hwnd)?;
-        let (metrics_tx, metrics_rx) = mpsc::unbounded_channel();
+        //let (metrics_tx, metrics_rx) = mpsc::unbounded_channel();
+        let metrics_collector = MetricsCollector::new(debug_params.unwrap().debug_level)?;
 
         pipeline
             .set_state(gstreamer::State::Playing)
@@ -88,15 +94,18 @@ impl WindowRecorder {
         let recorder = WindowRecorder {
             pipeline: pipeline.into(),
             recording_path: path.to_path_buf(),
-            metrics_tx,
+            metrics_collector,
         };
 
-        Ok((recorder, metrics_rx))
+        Ok(recorder)
     }
 
     pub fn listen_to_messages(&self) -> impl Future<Output = Result<()>> + use<> {
         let bus = self.pipeline.bus().unwrap();
-        let metrics_tx = self.metrics_tx.clone();
+
+        // FIXME - a clone is absolutely not what we want here but I'm a rust n00b and can't get a
+        // working mutable reference, help!
+        let mut metrics = self.metrics_collector.clone();
 
         async move {
             while let Some(msg) = bus.stream().next().await {
@@ -108,12 +117,12 @@ impl WindowRecorder {
                         break;
                     }
                     MessageView::Error(err) => {
-                        let _ = metrics_tx.send(MetricsEvent::EncodingError);
+                        metrics.record_encoding_error();
                         return Err(eyre!(err.error()).wrap_err("Received error message from bus"));
                     }
                     MessageView::Qos(_) => {
                         // QoS messages indicate quality issues, record as potential frame drops
-                        let _ = metrics_tx.send(MetricsEvent::FrameDrop);
+                        metrics.record_frame_drop();
                         tracing::warn!("QoS message received - potential performance issue");
                     }
                     MessageView::Warning(warning) => {
@@ -121,6 +130,13 @@ impl WindowRecorder {
                     }
                     _ => (),
                 };
+                // FIXME - this should probably be executed on a regular repeating timer, we can't
+                // guarantee that enough events will come in to trigger this frequently enough.
+                // Either way it should be rate limited, and won't work properly until I fix the
+                // mutable issue above
+                if let Err(e) = metrics.sample_system_resources() {
+                    tracing::warn!("Failed to sample system resources: {}", e);
+                }
             }
             Ok(())
         }
@@ -136,5 +152,8 @@ impl WindowRecorder {
         std::fs::metadata(&self.recording_path)
             .map(|m| m.len())
             .unwrap_or(0)
+    }
+    pub fn finalize_metrics(&self, file_size_bytes: u64) -> PerformanceMetrics {
+        return self.metrics_collector.finalize_metrics(file_size_bytes);
     }
 }

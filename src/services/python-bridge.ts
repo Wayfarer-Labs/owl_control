@@ -125,7 +125,7 @@ export class PythonBridge {
     try {
       // Call Electron service to start Python recording bridge process
       return await ElectronService.startRecordingBridge(
-        this.preferences.startRecordingKey, 
+        this.preferences.startRecordingKey,
         this.preferences.stopRecordingKey,
         this.preferences.debugLevel,
         this.preferences.saveDebugLog,

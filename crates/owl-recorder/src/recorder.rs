@@ -5,44 +5,31 @@ use tauri_winrt_notification::Toast;
 
 use crate::{
     find_game::{Game, get_foregrounded_game},
-    recording::{InputParameters, MetadataParameters, Recording, WindowParameters},
+    recording::{InputParameters, MetadataParameters, Recording, WindowParameters, DebugParameters},
 };
-
-#[cfg(feature = "real-video")]
-use video_audio_recorder::MetricsEvent;
 
 pub(crate) struct Recorder<D> {
     recording_dir: D,
     games: Vec<Game>,
     recording: Option<Recording>,
-    debug_level: Option<String>,
-    save_debug_log: bool,
-    gstreamer_logging_enabled: bool,
-    gstreamer_tracing_enabled: bool,
+    debug_params: DebugParameters,
 }
 
 impl<D> Recorder<D>
 where
     D: FnMut() -> PathBuf,
 {
-    pub(crate) fn new(recording_dir: D, games: Vec<Game>, debug_level: Option<String>, save_debug_log: bool, gstreamer_logging_enabled: bool, gstreamer_tracing_enabled: bool) -> Self {
+    pub(crate) fn new(recording_dir: D, games: Vec<Game>, debug_params: DebugParameters) -> Self {
         Self {
             recording_dir,
             games,
             recording: None,
-            debug_level,
-            save_debug_log,
-            gstreamer_logging_enabled,
-            gstreamer_tracing_enabled,
+            debug_params,
         }
     }
 
     pub(crate) fn recording(&self) -> Option<&Recording> {
         self.recording.as_ref()
-    }
-
-    pub(crate) fn recording_mut(&mut self) -> Option<&mut Recording> {
-        self.recording.as_mut()
     }
 
     pub(crate) async fn start(&mut self) -> Result<()> {
@@ -84,8 +71,12 @@ where
             InputParameters {
                 path: recording_location.join("inputs.csv"),
             },
-            self.debug_level.clone(),
-            self.save_debug_log,
+            DebugParameters {
+                debug_level: self.debug_params.debug_level.clone(),
+                save_debug_log: self.debug_params.save_debug_log,
+                gstreamer_logging_enabled: self.debug_params.gstreamer_logging_enabled,
+                gstreamer_tracing_enabled: self.debug_params.gstreamer_tracing_enabled,
+            }
         )
         .await?;
 
@@ -104,37 +95,14 @@ where
         Ok(())
     }
 
-    pub(crate) fn sample_system_resources(&mut self) -> Result<()> {
-        let Some(recording) = self.recording.as_mut() else {
-            return Ok(());
-        };
-        recording.sample_system_resources()
-    }
-
-    pub(crate) fn handle_metrics_events(&mut self) {
-        let Some(recording) = self.recording.as_mut() else {
-            return;
-        };
-
-        // Process all available metrics events
-        while let Some(event) = recording.try_recv_metrics_event() {
-            recording.handle_metrics_event(event);
-        }
-    }
-
     pub(crate) async fn stop(&mut self) -> Result<()> {
-        tracing::debug!("Recorder::stop() called");
         let Some(recording) = self.recording.take() else {
-            tracing::debug!("No recording to stop");
             return Ok(());
         };
 
-        tracing::debug!("Showing stop notification");
         Self::show_stop_notification(recording.game_exe());
 
-        tracing::debug!("Calling recording.stop()");
         recording.stop().await?;
-        tracing::debug!("Recording.stop() completed");
 
         Ok(())
     }

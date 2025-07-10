@@ -1,8 +1,6 @@
 use std::{
     path::{Path, PathBuf},
     time::{Instant, SystemTime, UNIX_EPOCH},
-    fs::OpenOptions,
-    io,
 };
 
 use color_eyre::Result;
@@ -11,9 +9,9 @@ use serde::Serialize;
 use tokio_util::task::AbortOnDropHandle;
 
 #[cfg(feature = "real-video")]
-use video_audio_recorder::{WindowRecorder, PerformanceMetrics, MetricsEvent, MetricsCollector};
+use video_audio_recorder::{WindowRecorder, PerformanceMetrics};
 #[cfg(feature = "real-video")]
-use tokio::sync::mpsc;
+pub use video_audio_recorder::{DebugParameters};
 
 use crate::{hardware_id, input_recorder::InputRecorder};
 
@@ -22,10 +20,6 @@ pub(crate) struct Recording {
     window_recorder: WindowRecorder,
     #[cfg(feature = "real-video")]
     window_recorder_listener: AbortOnDropHandle<Result<()>>,
-    #[cfg(feature = "real-video")]
-    metrics_collector: MetricsCollector,
-    #[cfg(feature = "real-video")]
-    metrics_rx: mpsc::UnboundedReceiver<MetricsEvent>,
     input_recorder: InputRecorder,
 
     metadata_path: PathBuf,
@@ -64,8 +58,7 @@ impl Recording {
             hwnd,
         }: WindowParameters,
         InputParameters { path: csv_path }: InputParameters,
-        debug_level: Option<String>,
-        save_debug_log: bool,
+        DebugParameters { debug_level, save_debug_log, gstreamer_logging_enabled, gstreamer_tracing_enabled } : DebugParameters,
     ) -> Result<Self> {
         let start_time = SystemTime::now();
         let start_instant = Instant::now();
@@ -73,19 +66,18 @@ impl Recording {
         #[cfg(feature = "real-video")]
         let debug_log_file = if save_debug_log {
             let debug_log_path = video_path.with_extension("debug.log");
-            redirect_stdout_stderr_to_file(&debug_log_path)?;
-            
+            //redirect_stdout_stderr_to_file(&debug_log_path)?;
+
             // Also set up GStreamer to log to the same file
             video_audio_recorder::set_gst_log_file(&debug_log_path)?;
-            
+
             Some(debug_log_path)
         } else {
             None
         };
-        let metrics_collector = MetricsCollector::new(debug_level)?;
         #[cfg(feature = "real-video")]
-        let (window_recorder, metrics_rx) =
-            WindowRecorder::start_recording(&video_path, pid.0, hwnd.0.expose_provenance())?;
+        let window_recorder =
+            WindowRecorder::start_recording(&video_path, pid.0, hwnd.0.expose_provenance(), Some(DebugParameters { debug_level, save_debug_log, gstreamer_logging_enabled, gstreamer_tracing_enabled} ))?;
         #[cfg(feature = "real-video")]
         let window_recorder_listener =
             AbortOnDropHandle::new(tokio::task::spawn(window_recorder.listen_to_messages()));
@@ -97,10 +89,6 @@ impl Recording {
             window_recorder,
             #[cfg(feature = "real-video")]
             window_recorder_listener,
-            #[cfg(feature = "real-video")]
-            metrics_collector,
-            #[cfg(feature = "real-video")]
-            metrics_rx,
 
             input_recorder,
 
@@ -148,52 +136,15 @@ impl Recording {
         self.input_recorder.seen_input(e).await
     }
 
-    pub(crate) fn sample_system_resources(&mut self) -> Result<()> {
-        #[cfg(feature = "real-video")]
-        {
-            self.metrics_collector.sample_system_resources()?;
-        }
-        Ok(())
-    }
-
-    pub(crate) fn handle_metrics_event(&mut self, event: MetricsEvent) {
-        #[cfg(feature = "real-video")]
-        {
-            match event {
-                MetricsEvent::FrameDrop => self.metrics_collector.record_frame_drop(),
-                MetricsEvent::EncodingError => self.metrics_collector.record_encoding_error(),
-            }
-        }
-    }
-
-    pub(crate) fn try_recv_metrics_event(&mut self) -> Option<MetricsEvent> {
-        #[cfg(feature = "real-video")]
-        {
-            self.metrics_rx.try_recv().ok()
-        }
-        #[cfg(not(feature = "real-video"))]
-        {
-            None
-        }
-    }
-
     pub(crate) async fn stop(self) -> Result<()> {
-        tracing::debug!("Recording::stop() called");
         #[cfg(feature = "real-video")]
         {
-            tracing::debug!("Dropping metrics receiver");
-            // Close the metrics receiver to signal we're done collecting metrics
-            drop(self.metrics_rx);
-
-            tracing::debug!("Calling window_recorder.stop_recording()");
             self.window_recorder.stop_recording();
-            tracing::debug!("Awaiting window_recorder_listener");
             self.window_recorder_listener.await.unwrap()?;
-            tracing::debug!("window_recorder_listener completed");
 
             // Try to save performance metrics, but don't fail the recording if this fails
             let file_size = self.window_recorder.get_file_size();
-            let performance_metrics = self.metrics_collector.finalize_metrics(file_size);
+            let performance_metrics = self.window_recorder.finalize_metrics(file_size);
             let metrics_path = self.metadata_path.parent()
                 .unwrap_or_else(|| std::path::Path::new("."))
                 .join("performance_metrics.json");
@@ -270,54 +221,4 @@ struct Metadata {
     start_timestamp: u64,
     end_timestamp: u64,
     duration: f32,
-}
-
-#[cfg(target_os = "windows")]
-fn redirect_stdout_stderr_to_file(log_path: &Path) -> Result<()> {
-    use std::os::windows::io::AsRawHandle;
-    use windows::Win32::System::Console::{SetStdHandle, STD_ERROR_HANDLE, STD_OUTPUT_HANDLE};
-    use windows::Win32::Foundation::HANDLE;
-    
-    let file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(log_path)?;
-    
-    let handle = HANDLE(file.as_raw_handle() as *mut std::ffi::c_void);
-    
-    unsafe {
-        SetStdHandle(STD_OUTPUT_HANDLE, handle)?;
-        SetStdHandle(STD_ERROR_HANDLE, handle)?;
-    }
-    
-    // Don't close the file handle here - it needs to stay open for stdout/stderr
-    std::mem::forget(file);
-    
-    tracing::info!("Redirected stdout/stderr to {}", log_path.display());
-    
-    Ok(())
-}
-
-#[cfg(target_os = "linux")]
-fn redirect_stdout_stderr_to_file(log_path: &Path) -> Result<()> {
-    use std::os::unix::io::AsRawFd;
-    
-    let file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(log_path)?;
-    
-    let fd = file.as_raw_fd();
-    
-    unsafe {
-        libc::dup2(fd, libc::STDOUT_FILENO);
-        libc::dup2(fd, libc::STDERR_FILENO);
-    }
-    
-    // Don't close the file handle here - it needs to stay open for stdout/stderr
-    std::mem::forget(file);
-    
-    tracing::info!("Redirected stdout/stderr to {}", log_path.display());
-    
-    Ok(())
 }
