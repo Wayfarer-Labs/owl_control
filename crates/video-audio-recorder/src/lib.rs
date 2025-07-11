@@ -79,7 +79,6 @@ pub struct WindowRecorder {
 impl WindowRecorder {
     pub fn start_recording(path: &Path, pid: u32, hwnd: usize, debug_params: Option<DebugParameters>) -> Result<WindowRecorder> {
         let pipeline = create_pipeline(path, pid, hwnd)?;
-        //let (metrics_tx, metrics_rx) = mpsc::unbounded_channel();
         let metrics_collector = MetricsCollector::new(debug_params.unwrap().debug_level)?;
 
         pipeline
@@ -100,7 +99,7 @@ impl WindowRecorder {
 
         // FIXME - a clone is absolutely not what we want here but I'm a rust n00b and can't get a
         // working mutable reference, help!
-        let mut metrics = self.metrics_collector.clone();
+        //let &mut metrics = &mut (self.metrics_collector);
 
         async move {
             while let Some(msg) = bus.stream().next().await {
@@ -112,12 +111,12 @@ impl WindowRecorder {
                         break;
                     }
                     MessageView::Error(err) => {
-                        metrics.record_encoding_error();
+                        //self.metrics_collector.record_encoding_error();
                         return Err(eyre!(err.error()).wrap_err("Received error message from bus"));
                     }
                     MessageView::Qos(_) => {
                         // QoS messages indicate quality issues, record as potential frame drops
-                        metrics.record_frame_drop();
+                        //metrics.record_frame_drop();
                         tracing::warn!("QoS message received - potential performance issue");
                     }
                     MessageView::Warning(warning) => {
@@ -129,9 +128,11 @@ impl WindowRecorder {
                 // guarantee that enough events will come in to trigger this frequently enough.
                 // Either way it should be rate limited, and won't work properly until I fix the
                 // mutable issue above
-                if let Err(e) = metrics.sample_system_resources() {
+                /*
+                if let Err(e) = self.metrics_collector.sample_system_resources() {
                     tracing::warn!("Failed to sample system resources: {}", e);
                 }
+                */
             }
             Ok(())
         }
