@@ -85,13 +85,11 @@ impl WindowRecorder {
             .set_state(gstreamer::State::Playing)
             .wrap_err("failed to set pipeline state to Playing")?;
 
-        let recorder = WindowRecorder {
+        Ok(WindowRecorder {
             pipeline: pipeline.into(),
             recording_path: path.to_path_buf(),
             metrics_collector,
-        };
-
-        Ok(recorder)
+        })
     }
 
     pub fn listen_to_messages(&self) -> impl Future<Output = Result<()>> + use<> {
