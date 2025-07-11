@@ -16,11 +16,6 @@ pub use gstreamer;
 pub mod metrics;
 pub use metrics::{MetricsCollector, PerformanceMetrics, SystemInfo, set_gst_log_file};
 
-#[derive(Debug, Clone)]
-pub enum MetricsEvent {
-    FrameDrop,
-    EncodingError,
-}
 pub struct DebugParameters {
     pub debug_level: Option<String>,
     pub save_debug_log: bool,
