@@ -149,7 +149,8 @@ impl WindowRecorder {
             .map(|m| m.len())
             .unwrap_or(0)
     }
-    pub fn finalize_metrics(&self, file_size_bytes: u64) -> PerformanceMetrics {
+    pub fn finalize_metrics(&self) -> PerformanceMetrics {
+        let file_size_bytes = self.get_file_size();
         return self.metrics_collector.finalize_metrics(file_size_bytes);
     }
 }
