@@ -14,4 +14,4 @@ derive_more.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 num_cpus = "1.15.0"
-chrono.workspace = true
+chrono = { version = "0.4", features = ["serde"] }
