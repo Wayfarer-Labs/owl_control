@@ -17,7 +17,6 @@ uuid.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tauri-winrt-notification.workspace = true
-windows = { workspace = true, features = ["Win32_System_Console", "Win32_Foundation"] }
 
 [features]
 default = ["real-video"]

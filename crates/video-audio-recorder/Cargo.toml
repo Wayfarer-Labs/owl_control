@@ -13,6 +13,5 @@ color-eyre.workspace = true
 derive_more.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-num_cpus = "1.15.0"
 chrono = { version = "0.4", features = ["serde"] }
 sysinfo = "0.36.0"
