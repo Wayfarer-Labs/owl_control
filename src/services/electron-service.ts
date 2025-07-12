@@ -34,10 +34,10 @@ export class ElectronService {
   /**
    * Start recording bridge
    */
-  public static async startRecordingBridge(startKey: string, stopKey: string): Promise<boolean> {
+  public static async startRecordingBridge(startKey: string, stopKey: string, debugLevel?: string, saveDebugLog?: boolean, gstreamerLoggingEnabled?: boolean, gstreamerTracingEnabled?: boolean): Promise<boolean> {
     const ipcRenderer = this.getIpcRenderer();
     if (!ipcRenderer) return false;
-    return ipcRenderer.invoke('start-recording-bridge', startKey, stopKey);
+    return ipcRenderer.invoke('start-recording-bridge', startKey, stopKey, debugLevel, saveDebugLog, gstreamerLoggingEnabled, gstreamerTracingEnabled);
   }
   
   /**

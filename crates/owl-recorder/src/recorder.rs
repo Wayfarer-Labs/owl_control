@@ -5,24 +5,26 @@ use tauri_winrt_notification::Toast;
 
 use crate::{
     find_game::{Game, get_foregrounded_game},
-    recording::{InputParameters, MetadataParameters, Recording, WindowParameters},
+    recording::{InputParameters, MetadataParameters, Recording, WindowParameters, DebugParameters},
 };
 
 pub(crate) struct Recorder<D> {
     recording_dir: D,
     games: Vec<Game>,
     recording: Option<Recording>,
+    debug_params: DebugParameters,
 }
 
 impl<D> Recorder<D>
 where
     D: FnMut() -> PathBuf,
 {
-    pub(crate) fn new(recording_dir: D, games: Vec<Game>) -> Self {
+    pub(crate) fn new(recording_dir: D, games: Vec<Game>, debug_params: DebugParameters) -> Self {
         Self {
             recording_dir,
             games,
             recording: None,
+            debug_params,
         }
     }
 
@@ -69,6 +71,12 @@ where
             InputParameters {
                 path: recording_location.join("inputs.csv"),
             },
+            DebugParameters {
+                debug_level: self.debug_params.debug_level.clone(),
+                save_debug_log: self.debug_params.save_debug_log,
+                gstreamer_logging_enabled: self.debug_params.gstreamer_logging_enabled,
+                gstreamer_tracing_enabled: self.debug_params.gstreamer_tracing_enabled,
+            }
         )
         .await?;
 

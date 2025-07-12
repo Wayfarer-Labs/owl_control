@@ -27,6 +27,7 @@ use video_audio_recorder::gstreamer;
 use crate::{
     find_game::Game, idle::IdlenessTracker, keycode::lookup_keycode,
     raw_input_debouncer::EventDebouncer, recorder::Recorder,
+    recording::DebugParameters,
 };
 
 #[derive(Parser, Debug)]
@@ -43,6 +44,18 @@ struct Args {
 
     #[arg(long, default_value = "F5")]
     stop_key: String,
+
+    #[arg(long)]
+    debug_level: Option<String>,
+
+    #[arg(long)]
+    save_debug_log: bool,
+
+    #[arg(long)]
+    gstreamer_logging_enabled: bool,
+
+    #[arg(long)]
+    gstreamer_tracing_enabled: bool,
 }
 
 const MAX_IDLE_DURATION: Duration = Duration::from_secs(30);
@@ -60,6 +73,10 @@ async fn main() -> Result<()> {
         games,
         start_key,
         stop_key,
+        debug_level,
+        save_debug_log,
+        gstreamer_logging_enabled,
+        gstreamer_tracing_enabled,
     } = Args::parse();
 
     let games = games.into_iter().map(Game::new).collect();
@@ -80,6 +97,12 @@ async fn main() -> Result<()> {
             )
         },
         games,
+        DebugParameters {
+            debug_level,
+            save_debug_log,
+            gstreamer_logging_enabled,
+            gstreamer_tracing_enabled,
+        }
     );
 
     let mut input_rx = listen_for_raw_inputs();
@@ -186,3 +209,4 @@ fn wait_for_ctrl_c() -> oneshot::Receiver<()> {
     });
     ctrl_c_rx
 }
+

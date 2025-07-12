@@ -20,6 +20,11 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
   const [stopRecordingKey, setStopRecordingKey] = useState('f5');
   const [apiToken, setApiToken] = useState('');
   const [deleteUploadedFiles, setDeleteUploadedFiles] = useState(false);
+  const [debugEnabled, setDebugEnabled] = useState(false);
+  const [saveDebugLog, setSaveDebugLog] = useState(true);
+  const [gstreamerLoggingEnabled, setGstreamerLoggingEnabled] = useState(false);
+  const [debugLevel, setDebugLevel] = useState('4,GST_*:2,task:2,base*:2,aggregator:2,structure:2,ringbuffer:2,structure:2,audio*:2');
+  const [enableTraceDumps, setEnableTraceDumps] = useState(false);
   
   // Define the button styles directly in the component for reliability
   const buttonStyle = {
@@ -73,6 +78,21 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
     if (prefs.apiToken) setApiToken(prefs.apiToken);
     if (prefs.deleteUploadedFiles !== undefined) setDeleteUploadedFiles(prefs.deleteUploadedFiles);
     
+    // Load debug preferences
+    if (prefs.debugEnabled !== undefined) setDebugEnabled(prefs.debugEnabled);
+    if (prefs.saveDebugLog !== undefined) setSaveDebugLog(prefs.saveDebugLog);
+    if (prefs.gstreamerLoggingEnabled !== undefined) setGstreamerLoggingEnabled(prefs.gstreamerLoggingEnabled);
+    if (prefs.gstreamerTracingEnabled !== undefined) setEnableTraceDumps(prefs.gstreamerTracingEnabled);
+    if (prefs.debugLevel) setDebugLevel(prefs.debugLevel);
+    
+    // Handle legacy debugLevel loading for backwards compatibility
+    if (prefs.debugLevel && prefs.debugEnabled === undefined) {
+      if (prefs.debugLevel && prefs.debugLevel !== 'none' && prefs.debugLevel !== '') {
+        setDebugEnabled(true);
+        setGstreamerLoggingEnabled(true);
+      }
+    }
+    
     // Always load user info after preferences
     loadUserInfo();
   }, []);
@@ -112,7 +132,12 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
       startRecordingKey,
       stopRecordingKey,
       apiToken,
-      deleteUploadedFiles
+      deleteUploadedFiles,
+      debugEnabled,
+      saveDebugLog,
+      gstreamerLoggingEnabled,
+      gstreamerTracingEnabled: enableTraceDumps,
+      debugLevel: (debugEnabled && gstreamerLoggingEnabled) ? debugLevel : undefined
     });
     
     // After saving preferences, automatically start the Python bridges
@@ -297,6 +322,135 @@ export function SettingsPage({ onClose }: SettingsPageProps) {
               />
               <p className="text-xs text-gray-400">Enter the key for starting/stopping recording (defaults: f4/f5). Note: Only simple keys like F1-F12, or letters are supported by the Python hotkey system.</p>
             </div>
+          </div>
+        </div>
+        
+        {/* Debug Settings */}
+        <div className="bg-[#13151a] rounded-lg border border-[#2a2d35] p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-white select-none">Debug Settings</h3>
+            <div className="flex items-center">
+              <div 
+                className="relative flex items-center select-none cursor-pointer" 
+                onClick={() => setDebugEnabled(!debugEnabled)}
+              >
+                <div 
+                  className={`w-5 h-5 mr-2 border rounded flex items-center justify-center ${
+                    debugEnabled 
+                      ? 'bg-[#1a73e8] border-[#1a73e8]' 
+                      : 'bg-[#0c0c0f] border-[#2a2d35]'
+                  }`}
+                >
+                  {debugEnabled && (
+                    <Check className="h-3.5 w-3.5 text-white" />
+                  )}
+                </div>
+                <span className="text-sm text-white select-none">
+                  Enable debug
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-4">
+            
+            {/* Debug sub-options - only shown when debug is enabled */}
+            {debugEnabled && (
+              <div className="space-y-4 ml-4 pl-4 border-l border-[#2a2d35]">
+                {/* Save debug log option */}
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm text-white select-none">Save debug log with each recording</Label>
+                  <div className="flex items-center">
+                    <div 
+                      className="relative flex items-center select-none cursor-pointer" 
+                      onClick={() => setSaveDebugLog(!saveDebugLog)}
+                    >
+                      <div 
+                        className={`w-5 h-5 mr-2 border rounded flex items-center justify-center ${
+                          saveDebugLog 
+                            ? 'bg-[#1a73e8] border-[#1a73e8]' 
+                            : 'bg-[#0c0c0f] border-[#2a2d35]'
+                        }`}
+                      >
+                        {saveDebugLog && (
+                          <Check className="h-3.5 w-3.5 text-white" />
+                        )}
+                      </div>
+                      <span className="text-sm text-white select-none">
+                        Save debug log
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* GStreamer debugging section */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm text-white select-none">GStreamer debugging</Label>
+                    <div className="flex items-center">
+                      <div 
+                        className="relative flex items-center select-none cursor-pointer" 
+                        onClick={() => setGstreamerLoggingEnabled(!gstreamerLoggingEnabled)}
+                      >
+                        <div 
+                          className={`w-5 h-5 mr-2 border rounded flex items-center justify-center ${
+                            gstreamerLoggingEnabled 
+                              ? 'bg-[#1a73e8] border-[#1a73e8]' 
+                              : 'bg-[#0c0c0f] border-[#2a2d35]'
+                          }`}
+                        >
+                          {gstreamerLoggingEnabled && (
+                            <Check className="h-3.5 w-3.5 text-white" />
+                          )}
+                        </div>
+                        <span className="text-sm text-white select-none">
+                          Enable GStreamer debugging
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* GStreamer sub-options - only shown when GStreamer debugging is enabled */}
+                  {gstreamerLoggingEnabled && (
+                    <div className="space-y-4 ml-4 pl-4 border-l border-[#2a2d35]">
+                      {/* Debug level input */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor="debugLevel" className="text-sm text-white select-none">GST_DEBUG=</Label>
+                          <Input
+                            id="debugLevel"
+                            value={debugLevel}
+                            onChange={(e) => setDebugLevel(e.target.value)}
+                            placeholder="4,GST_*:2,task:2,base*:2,aggregator:2,structure:2,ringbuffer:2,structure:2,audio*:2"
+                            className="bg-[#0c0c0f] border-[#2a2d35] text-white flex-1"
+                          />
+                        </div>
+                        <p className="text-xs text-gray-400">
+                          GStreamer debug format string. Examples: "*:3" (all categories at level 3), 
+                          "audiotestsrc:6,*:2" (audiotestsrc at level 6, others at level 2), 
+                          "audio*:5" (all audio categories at level 5). 
+                          Levels: 0=None, 1=Error, 2=Warning, 3=Fixme, 4=Info, 5=Debug, 6=Log, 7=Trace, 9=Memdump.
+                        </p>
+                      </div>
+                      
+                      {/* GStreamer trace dumps (disabled) */}
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm text-white select-none">GStreamer trace dumps</Label>
+                        <div className="flex items-center">
+                          <div className="relative flex items-center select-none opacity-50 cursor-not-allowed">
+                            <div className="w-5 h-5 mr-2 border rounded flex items-center justify-center bg-[#0c0c0f] border-[#2a2d35]">
+                              {/* Always unchecked and disabled - no check mark */}
+                            </div>
+                            <span className="text-sm text-white select-none">
+                              Enable trace dumps
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

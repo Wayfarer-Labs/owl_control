@@ -23,7 +23,7 @@ const GAME_LIST = [
   'MCC-Win64-Shipping',
   'farcry3', 'fc3', 'farcry4', 'farcry5', 'fc3_blooddragon',
   'Cyberpunk2077',
-  'Frog_Detective',
+  'Frog_Detective', 'Frog_Detective_2', 'Frog_Detective_3', 'The_Haunted_Island',
 ]
 
 // Secure store for credentials and preferences
@@ -447,7 +447,7 @@ function updateTrayMenu() {
 // Start Python bridges after authentication
 
 // Start Python recording bridge
-function startRecordingBridge(startKey: string, stopKey: string) {
+function startRecordingBridge(startKey: string, stopKey: string, debugLevel?: string, saveDebugLog?: boolean, gstreamerLoggingEnabled?: boolean, gstreamerTracingEnabled?: boolean) {
   try {
     // Stop existing process if running
     if (pythonProcess) {
@@ -464,6 +464,10 @@ function startRecordingBridge(startKey: string, stopKey: string) {
       '--start-key', startKey,
       '--stop-key', stopKey,
       ...GAME_LIST.flatMap(game => ['--games', game]),
+      ...(debugLevel ? ['--debug-level', debugLevel] : []),
+      ...(saveDebugLog ? ['--save-debug-log'] : []),
+      ...(gstreamerLoggingEnabled ? ['--gstreamer-logging-enabled'] : []),
+      ...(gstreamerTracingEnabled ? ['--gstreamer-tracing-enabled'] : []),
     ], {
       cwd: rootDir(),
       env: {
@@ -559,11 +563,15 @@ app.on('ready', () => {
   if (isAuthenticated()) {
     const startKey = secureStore.preferences.startRecordingKey || 'f4';
     const stopKey = secureStore.preferences.stopRecordingKey || 'f5';
+    const debugLevel = secureStore.preferences.debugLevel || false;
+    const saveDebugLog = secureStore.preferences.saveDebugLog || false;
+    const gstreamerLoggingEnabled = secureStore.preferences.gstreamerLoggingEnabled || false;
+    const gstreamerTracingEnabled = secureStore.preferences.gstreamerTracingEnabled || false;
     const apiToken = secureStore.credentials.apiKey || '';
     const deleteUploadedFiles = secureStore.preferences.deleteUploadedFiles || false;
 
     // Start the recording bridge
-    startRecordingBridge(startKey, stopKey);
+    startRecordingBridge(startKey, stopKey, debugLevel, saveDebugLog, gstreamerLoggingEnabled, gstreamerTracingEnabled);
 
     // Start the upload bridge
     startUploadBridge(apiToken, deleteUploadedFiles);
@@ -675,9 +683,13 @@ function setupIpcHandlers() {
         const stopKey = secureStore.preferences.stopRecordingKey || 'f5';
         const apiToken = secureStore.credentials.apiKey || '';
         const deleteUploadedFiles = secureStore.preferences.deleteUploadedFiles || false;
+        const debugLevel = secureStore.preferences.debugLevel;
+        const saveDebugLog = secureStore.preferences.saveDebugLog || false;
+        const gstreamerLoggingEnabled = secureStore.preferences.gstreamerLoggingEnabled || false;
+        const gstreamerTracingEnabled = secureStore.preferences.gstreamerTracingEnabled || false;
 
         // Restart the recording bridge
-        startRecordingBridge(startKey, stopKey);
+        startRecordingBridge(startKey, stopKey, debugLevel, saveDebugLog, gstreamerLoggingEnabled, gstreamerTracingEnabled);
 
         // Restart the upload bridge
         startUploadBridge(apiToken, deleteUploadedFiles);
@@ -701,8 +713,8 @@ function setupIpcHandlers() {
   });
 
   // Start recording bridge
-  ipcMain.handle('start-recording-bridge', async (_, startKey: string, stopKey: string) => {
-    return startRecordingBridge(startKey, stopKey);
+  ipcMain.handle('start-recording-bridge', async (_, startKey: string, stopKey: string, debugLevel?: string, saveDebugLog?: boolean, gstreamerLoggingEnabled?: boolean, gstreamerTracingEnabled?: boolean) => {
+    return startRecordingBridge(startKey, stopKey, debugLevel, saveDebugLog, gstreamerLoggingEnabled, gstreamerTracingEnabled);
   });
 
   // Start upload bridge
@@ -727,9 +739,13 @@ function setupIpcHandlers() {
     const stopKey = secureStore.preferences.stopRecordingKey || 'f5';
     const apiToken = secureStore.credentials.apiKey || '';
     const deleteUploadedFiles = secureStore.preferences.deleteUploadedFiles || false;
+    const debugLevel = secureStore.preferences.debugLevel;
+    const saveDebugLog = secureStore.preferences.saveDebugLog || false;
+    const gstreamerLoggingEnabled = secureStore.preferences.gstreamerLoggingEnabled || false;
+    const gstreamerTracingEnabled = secureStore.preferences.gstreamerTracingEnabled || false;
 
     // Start the recording bridge
-    startRecordingBridge(startKey, stopKey);
+    startRecordingBridge(startKey, stopKey, debugLevel, saveDebugLog, gstreamerLoggingEnabled, gstreamerTracingEnabled);
 
     // Start the upload bridge
     startUploadBridge(apiToken, deleteUploadedFiles);
